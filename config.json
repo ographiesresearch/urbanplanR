@@ -1,0 +1,8 @@
+{
+  "states": "MA",
+  "placename": ["Salem"],
+  "crs": 2249,
+  "census_unit": "tracts",
+  "agg_geography": "place",
+  "year": 2021
+}
