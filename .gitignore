@@ -47,3 +47,10 @@ po/*~
 
 # RStudio Connect folder
 rsconnect/
+
+# Folder created by shapefile output.
+results/
+
+# GIS filetypes
+*.gpkg*
+.DS_Store

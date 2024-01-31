@@ -1,36 +1,3 @@
-std_census_unit <- function() {
-  if (CONFIG$census_unit %in% c("tract", "tracts")) {
-    CONFIG$census_unit <<- "tract"
-  } else if (CONFIG$census_unit %in% c("block groups", "block group", "bg")) {
-    CONFIG$census_unit <<- "bg"
-  } else {
-    stop("census_unit parameter must be one of 'tracts' or 'block groups'.")
-  }
-}
-
-get_remote_zip <- function(url, path) {
-  httr::GET(
-    paste0(url), 
-    httr::write_disk(path, overwrite = TRUE)
-  )
-}
-
-read_shp_from_zip <- function(path, layer) {
-  path <- stringr::str_c("/vsizip/", path, "/", layer)
-  sf::st_read(path, quiet=TRUE)
-}
-
-get_mass_munis <- function(crs = CONFIG$crs) {
-  temp <- base::tempfile(fileext = ".zip")
-  message("Downloading Massachusetts Municipalities...")
-  get_remote_zip(
-    url = "https://s3.us-east-1.amazonaws.com/download.massgis.digital.mass.gov/shapefiles/state/townssurvey_shp.zip",
-    path = temp
-    )
-  read_shp_from_zip(temp, "TOWNSSURVEY_POLYM.shp") |>
-    sf::st_transform(crs)
-}
-
 center_xy <- function(sdf) {
   sdf |>
     dplyr::mutate(
@@ -39,53 +6,6 @@ center_xy <- function(sdf) {
       y = sf::st_coordinates(point)[,2]
     ) |>
     dplyr::select(-point)
-}
-
-get_places <- function(states = CONFIG$states, 
-                       year = CONFIG$year,
-                       crs = CONFIG$crs) {
-  place_geo <- tigris::places(
-      state = states,
-      year = year,
-      cb = TRUE
-    ) |>
-    sf::st_transform(crs)
-}
-
-prep_places <- function(df) {
-  df |>
-    center_xy() |>
-    dplyr::select(
-      pl_id = GEOID,
-      pl_name = NAME,
-      x_pl = x,
-      y_pl = y
-    )
-}
-
-prep_munis <- function(df) {
-  df |>
-    center_xy() |>
-    dplyr::mutate(
-      town = stringr::str_to_title(TOWN)
-    ) |>
-    dplyr::select(
-      pl_id = TOWN_ID,
-      pl_name = town,
-      x_pl = x,
-      y_pl = y
-    )
-}
-
-place_decision <- function(states = CONFIG$states) {
-  if (states == "MA") {
-    place_geo <- get_mass_munis() |>
-      prep_munis()
-  } else {
-    place_geo <- get_places() |>
-      prep_places()
-  }
-  place_geo
 }
 
 get_lodes <- function(states = CONFIG$states, 
@@ -111,88 +31,6 @@ prep_lodes <- function(od,
       w_unit = {{w_col}},
       h_unit = {{h_col}}
     )
-}
-
-get_census_units <- function(states = CONFIG$states, 
-                             year = CONFIG$year, 
-                             crs = CONFIG$crs,
-                             census_unit = CONFIG$census_unit) {
-  if (census_unit == "tract") {
-    message("Downloading tract geometries.")
-    df <- tigris::tracts(
-      year = year, 
-      state = states, 
-      cb = TRUE
-    )
-  } else if (census_unit == "bg") {
-    message("Downloading block group geometries.")
-    df <- tigris::block_groups(
-      year = year, 
-      state = states, 
-      cb = TRUE
-    )
-  } else {
-    stop("census_unit parameter must be one of 'tracts' or 'block groups'.")
-  }
-  df |>
-    sf::st_transform(crs)
-}
-
-# census_units_to_lodes <- function(
-#     df, 
-#     lodes_od,
-#     census_unit = CONFIG$census_unit
-#     ) {
-#   df |>
-#     dplyr::left_join(
-#       lodes_od |>
-#         dplyr::group_by(h_unit) |>
-#         dplyr::summarize(
-#           home_count = sum(S000)
-#         ), 
-#       by = c("GEOID" = "h_unit")
-#     ) |>
-#     dplyr::left_join(
-#       lodes_od |>
-#         dplyr::group_by(w_unit) |>
-#         dplyr::summarize(
-#           job_count = sum(S000)
-#         ), 
-#       by = c("GEOID" = "w_unit")
-#     ) |>
-#     tidyr::replace_na(
-#       list(
-#         "job_count" = 0, 
-#         "home_count" = 0
-#       )
-#     )
-# }
-
-select_place <- function(place_geo) {
-  placenames_regex <- stringr::str_c("^", CONFIG$placename, collapse="|")
-  place_matches <- stringr::str_detect(
-    place_geo$pl_name, 
-    placenames_regex
-    )
-  name_count <- sum(place_matches)
-  match_string <- place_geo |> 
-      dplyr::filter(place_matches) |> 
-      dplyr::pull(pl_name) |>
-      stringr::str_c(collapse=', ')
-  if (all(stringr::str_c(CONFIG$placename) %in% place_geo$pl_name)) {
-    message(glue::glue("Exact match found for place name(s): {stringr::str_c(CONFIG$placename, collapse=', ')}."))
-    place_geo <- place_geo |>
-      dplyr::filter(CONFIG$placename == pl_name)
-  } else if (name_count == length(CONFIG$placename)) {
-    message(glue::glue("Found closely matching place name(s): {match_string}."))
-    place_geo <- place_geo |>
-      dplyr::filter(place_matches)
-  } else if (name_count > length(CONFIG$placename)) {
-    message(glue::glue("Ambiguous place name---could refer to more than one place: {match_string}."))
-  } else {
-    message("Place not found.")
-  }
-  place_geo
 }
 
 make_line <- function(xyxy){
@@ -221,27 +59,71 @@ xyxy_to_lines <- function(df, crs, names = c("x_h","y_h","x_w","y_w")){
   sf::st_sf(
     df, 
     geometry = df |>
-      dplyr::select(names) |>
+      dplyr::select(dplyr::all_of(names)) |>
       base::apply(1, make_line, simplify = FALSE) |>
       sf::st_sfc(crs = crs)
+    ) |>
+    dplyr::select(
+      -all_of(names)
     )
 }
 
+select_place <- function(place_geo) {
+  placenames_regex <- stringr::str_c("^", CONFIG$placename, collapse="|")
+  place_matches <- stringr::str_detect(
+    place_geo$pl_name, 
+    placenames_regex
+  )
+  name_count <- sum(place_matches)
+  match_string <- place_geo |> 
+    dplyr::filter(place_matches) |> 
+    dplyr::pull(pl_name) |>
+    stringr::str_c(collapse=', ')
+  if (all(stringr::str_c(CONFIG$placename) %in% place_geo$pl_name)) {
+    message(glue::glue("Exact match found for place name(s): {stringr::str_c(CONFIG$placename, collapse=', ')}."))
+    place_geo <- place_geo |>
+      dplyr::filter(CONFIG$placename == pl_name)
+  } else if (name_count == length(CONFIG$placename)) {
+    message(glue::glue("Found closely matching place name(s): {match_string}."))
+    place_geo <- place_geo |>
+      dplyr::filter(place_matches)
+  } else if (name_count > length(CONFIG$placename)) {
+    message(glue::glue("Ambiguous place name---could refer to more than one place: {match_string}."))
+  } else {
+    message("Place not found.")
+  }
+  place_geo
+}
+
+
 census_units_to_places <- function(census_units, place_geo) {
-  census_units <- census_units |>
+  # This is necessary to suppress 'st_point_on_surface assumes attributes are 
+  # constant over geometries' warning.
+  sf::st_agr(census_units) <- "constant"
+  census_units_pts <- census_units |>
     sf::st_point_on_surface() |>
     sf::st_join(place_geo) |>
     center_xy() 
   if ("placename" %in% names(CONFIG)) {
-    census_units <- census_units |>
+    census_units_pts <- census_units_pts |>
       sf::st_join(
-      select_place(place_geo) |>
-        dplyr::mutate(
-          sel = TRUE
-        ) |>
-        dplyr::select(sel)
-    )
+        select_place(place_geo) |>
+          dplyr::mutate(
+            sel = TRUE
+          ) |>
+          dplyr::select(sel)
+      ) |>
+      tidyr::replace_na(
+        list(sel = FALSE)
+      )
   }
+  sf::st_sf(
+    census_units_pts |> sf::st_drop_geometry(),
+    census_units |> sf::st_geometry()
+    )
+}
+
+census_units_drop_cols <- function(census_units) {
   census_units |>
     dplyr::select(
       unit_id = GEOID,
@@ -273,7 +155,7 @@ lodes_to_census_units <- function(df,
           y_pl_w = y_pl,
           pl_w = pl_id,
           pl_n_w = pl_name,
-          sel_w = sel
+          dplyr::any_of(c(sel_w = "sel"))
         ), 
       by = c("w_unit" = "unit_id")
     ) |>
@@ -286,13 +168,13 @@ lodes_to_census_units <- function(df,
           y_pl_h = y_pl,
           pl_h = pl_id,
           pl_n_h = pl_name,
-          sel_h = sel
+          dplyr::any_of(c(sel_h = "sel"))
         ),
       by = c("h_unit" = "unit_id")
     )
 }
 
-proximity_measures <- function(census_units, od_census_units) {
+proximity_measures <- function(od_census_units) {
   prox <- od_census_units |>
     dplyr::mutate(
       in_unit = w_unit == h_unit,
@@ -406,23 +288,13 @@ proximity_measures <- function(census_units, od_census_units) {
     dplyr::select(-in_town_FALSE) |>
     dplyr::filter(unit_id %in% pl_h_null)
   
-  joiner <- c("GEOID" = "unit_id")
-  census_units |>
-    dplyr::left_join(
-      w_in_tract, by = joiner
-    ) |>
-    dplyr::left_join(
-      w_in_town, by = joiner
-    ) |>
-    dplyr::left_join(
-      h_in_tract, by = joiner
-    ) |>
-    dplyr::left_join(
-      h_in_town, by = joiner
-    )
+  w_in_tract |>
+    dplyr::left_join(w_in_town, by = "unit_id") |>
+    dplyr::left_join(h_in_tract, by = "unit_id") |>
+    dplyr::left_join(h_in_town, by = "unit_id")
 }
 
-residents_workers <- function(census_units, od_census_units) {
+selected_ods_poly <- function(od_census_units) {
   sel_workers <- od_census_units |>
     dplyr::filter(sel_w) |>
     dplyr::group_by(unit_id = h_unit, pl_n_w) |>
@@ -449,37 +321,16 @@ residents_workers <- function(census_units, od_census_units) {
       values_from = res_work
     )
   
-  census_units |>
-    dplyr::left_join(
-      sel_workers, by = c("GEOID" = "unit_id")
-    ) |>
-    dplyr::left_join(
-      sel_residents, by = c("GEOID" = "unit_id")
-    ) 
+  sel_workers |>
+    dplyr::left_join(sel_residents, by = "unit_id")
 }
 
-CONFIG <- jsonlite::read_json('config.json')
-std_census_unit()
-
-od <- get_lodes() |>
-  prep_lodes()
-
-census_units <- get_census_units()
-
-place_geo <- place_decision()
-
-census_unit_locs <- census_units |> 
-  census_units_to_places(place_geo)
-
-od_census_units <- od |>
-  lodes_to_census_units(census_unit_locs)
-
-census_units_measured <- census_units |>
-  proximity_measures(od_census_units) |>
-  residents_workers(od_census_units)
-
-test <- od_census_units |>
-  dplyr::filter(sel_h | sel_w) |>
+ods_lines <- function(od_census_units, crs = CONFIG$crs) {
+  if ("placename" %in% names(CONFIG)) {
+    od_census_units <- od_census_units |>
+      dplyr::filter(sel_h | sel_w)
+  }
+  od_census_units |>
   dplyr::rename(
     count = S000
   ) |>
@@ -492,36 +343,36 @@ test <- od_census_units |>
     x_w,
     y_w
   ) |>
-  xyxy_to_lines(crs = sf::st_crs(census_units)) |>
-  sf::st_write(
-    "results.gpkg",
-    "od",
-    append = FALSE,
-    delete_layer = TRUE
-    )
+  xyxy_to_lines(crs = crs)
+}
 
-
-test <- od_census_units |>
-  dplyr::filter(sel_h) |>
-  dplyr::group_by(pl_h, pl_w, x_pl_h, y_pl_h, x_pl_w, y_pl_w) |>
-  dplyr::summarize(
-    count = sum(S000)
-  ) |>
-  dplyr::ungroup() |>
-  dplyr::select(
-    pl_h,
-    pl_w,
-    count,
-    x_h = x_pl_h,
-    y_h = y_pl_h,
-    x_w = x_pl_w,
-    y_w = y_pl_w
-  ) |>
-  tidyr::drop_na() |>
-  xyxy_to_lines(crs = sf::st_crs(census_units)) |>
-  sf::st_write(
-    "results.gpkg",
-    "od_outbound",
-    append = FALSE,
-    delete_layer = TRUE
-  )
+ods_lines_place_agg <- function(od_census_units, crs = CONFIG$crs) {
+  if ("placename" %in% names(CONFIG)) {
+    od_census_units <- od_census_units |>
+      dplyr::filter(sel_h | sel_w)
+  }
+  od_census_units |>
+    dplyr::group_by(
+      pl_n_h, 
+      pl_n_w, 
+      x_h = x_pl_h, 
+      y_h = y_pl_h, 
+      x_w = x_pl_w,
+      y_w = y_pl_w
+    ) |>
+    dplyr::summarize(
+      count = sum(S000)
+    ) |>
+    dplyr::ungroup() |>
+    dplyr::select(
+      pl_n_h,
+      pl_n_w,
+      count,
+      x_h,
+      y_h,
+      x_w,
+      y_w
+    ) |>
+    tidyr::drop_na() |>
+    xyxy_to_lines(crs = crs)
+}
