@@ -4,7 +4,6 @@
   "placename": ["Boston"],
   "crs": 2249,
   "census_unit": "tracts",
-  "agg_geography": "place",
   "year": 2021,
   "format": "gpkg"
 }
