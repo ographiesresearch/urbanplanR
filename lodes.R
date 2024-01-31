@@ -11,15 +11,16 @@ center_xy <- function(sdf) {
 get_lodes <- function(states = CONFIG$states, 
                       year = CONFIG$year, 
                       census_unit = CONFIG$census_unit) {
-  od <- lehdr::grab_lodes(
+  suppressMessages(lehdr::grab_lodes(
     state = states,
     year = year,
     version = "LODES8",
     job_type = "JT01",
     segment = "S000",
     state_part = "main",
-    agg_geo = census_unit
-  )
+    agg_geo = census_unit,
+    use_cache = TRUE
+  ))
 }
 
 prep_lodes <- function(od,

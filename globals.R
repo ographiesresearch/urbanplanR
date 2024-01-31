@@ -1,4 +1,7 @@
 CONFIG <- jsonlite::read_json('config.json')
+if ("census_api" %in% names(CONFIG)) {
+  suppressMessages(tidycensus::census_api_key(CONFIG$census_api))
+}
 
 lehd_census_unit <- function() {
   if (CONFIG$census_unit %in% c("tract", "tracts")) {
@@ -53,6 +56,8 @@ write_multi <- function(df,
                         name, 
                         dir_name = CONFIG$project, 
                         format = CONFIG$format) {
+  
+  message(glue::glue("Writing {name}."))
   if (format == "gpkg") {
     sf::st_write(
       df,
@@ -98,7 +103,6 @@ read_shp_from_zip <- function(path, layer) {
 
 get_mass_munis <- function(crs = CONFIG$crs) {
   temp <- base::tempfile(fileext = ".zip")
-  message("Downloading Massachusetts Municipalities...")
   get_remote_zip(
     url = "https://s3.us-east-1.amazonaws.com/download.massgis.digital.mass.gov/shapefiles/state/townssurvey_shp.zip",
     path = temp
@@ -163,14 +167,16 @@ get_census_units <- function(states = CONFIG$states,
     df <- tigris::tracts(
       year = year, 
       state = states, 
-      cb = TRUE
+      cb = TRUE,
+      progress_bar = FALSE
     )
   } else if (census_unit == "bg") {
     message("Downloading block group geometries.")
     df <- tigris::block_groups(
       year = year, 
       state = states, 
-      cb = TRUE
+      cb = TRUE,
+      progress_bar = FALSE
     )
   } else {
     stop("census_unit parameter must be one of 'tracts' or 'block groups'.")

@@ -4,20 +4,20 @@ get_acs_table <- function(table,
                           census_unit = CONFIG$census_unit) {
   tidy_census_units()
   df <- tidycensus::get_acs(
-    geography = census_unit,
-    table = table, 
-    year = year,
-    state = states,
-    geometry = FALSE,
-    cache_table = TRUE
-  ) |>
+      geography = census_unit,
+      table = table, 
+      year = year,
+      state = states,
+      geometry = FALSE,
+      cache_table = TRUE
+    ) |>
     dplyr::filter(
       !stringr::str_detect(variable, "_C0[2-9]_")
     ) |>
     dplyr::mutate(
       variable = stringr::str_c(
         stringr::str_c(
-          "B", 
+          "B",
           stringr::str_sub(table, 2),
           "1",
           sep = ""
@@ -28,24 +28,17 @@ get_acs_table <- function(table,
     ) |>
     dplyr::left_join(
       tidycensus::load_variables(
-        year = CONFIG$year,
+        year = year,
         dataset = "acs5",
         cache = TRUE
       ) |>
-        dplyr::select(name, label), 
+        dplyr::select(name, label),
       by = c("variable" = "name")
     ) |>
     dplyr::mutate(
-      city = stringr::str_detect(
-        NAME, "city,"
-      ),
-      NAME = stringr::str_extract(
-        NAME,
-        glue::glue(".*(?=((CDP|city), {STATE_LONG}$))")
-      ),
       level = stringr::str_count(label, "!!") - 1,
       label = stringr::str_extract(
-        label, 
+        label,
         "(?<=!!)[0-9A-Za-z\\s,]+(?=(?:$|:$))"
       ),
       levels_flag = dplyr::case_when(
@@ -53,7 +46,7 @@ get_acs_table <- function(table,
         (level == dplyr::lag(level)) & (level > dplyr::lead(level)) ~ TRUE,
         .default = FALSE
       )
-    ) 
+    )
   
   max_level <- max(df$level)
   
@@ -63,6 +56,19 @@ get_acs_table <- function(table,
       levels = dplyr::case_when(
         levels_flag ~ list(seq.int(level, max_level, 1)),
         .default = list(level)
+      )
+    )
+}
+
+process_places <- function(df) {
+  df |>
+    dplyr::mutate(
+      city = stringr::str_detect(
+        NAME, "city,"
+      ),
+      NAME = stringr::str_extract(
+        NAME,
+        glue::glue(".*(?=((CDP|city), {STATE_LONG}$))")
       )
     )
 }
@@ -103,12 +109,21 @@ get_occupations <- function() {
   # https://data.census.gov/table/ACSST5Y2022.S2401
   suppressMessages(get_acs_table("S2401")) |>
     pivot_and_write(name = "occ", unique_col = "GEOID")
+  
+  suppressMessages(get_acs_table("S2401", census_unit = "place")) |>
+    process_places() |>
+    pivot_and_write(name = "occ_place", unique_col = "NAME")
 }
 
 get_industries <- function() {
   # Industry data from ACS Table S2403: Industry by Sex for the Civilian 
   # Employed Population 16 Years and Over
-  # https://data.census.gov/table/ACSST5Y2022.S2403
-  suppressMessages(get_acs_table("S2403")) |>
+  # https://data.census.gov/table/ACSST5Y2022.S2401
+  suppressMessages(get_acs_table("S2403", census_unit = "place")) |>
+    process_places() |>
     pivot_and_write(name = "ind", unique_col = "GEOID")
+  
+  suppressMessages(get_acs_table("S2403", census_unit = "place")) |>
+    process_places() |>
+    pivot_and_write(name = "ind_place", unique_col = "NAME")
 }
