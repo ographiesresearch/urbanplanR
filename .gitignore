@@ -48,6 +48,9 @@ po/*~
 # RStudio Connect folder
 rsconnect/
 
+# renv
+renv/
+
 # Folder created by shapefile output.
 results/
 
