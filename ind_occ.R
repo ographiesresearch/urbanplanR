@@ -128,5 +128,5 @@ get_industries <- function(census_unit = CONFIG$census_unit) {
   
   suppressMessages(get_acs_table("S2403", census_unit = "place")) |>
     process_places() |>
-    pivot_and_write(name = "occ_place", unique_col = c("unit_id", "name"))
+    pivot_and_write(name = "ind_place", unique_col = c("unit_id", "name"))
 }
