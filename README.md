@@ -173,9 +173,9 @@ The number of workers commuting from pl_n_h to pl_n_w.
 
 ### occ_{area_type}_{depth}
 
-These tables break down employment by occupation at various depths, or degrees of granularity based on ACS 5-year estimates of [Occupation by Sex for the Civilian Employed Population 16 Years and Over](https://data.census.gov/table/ACSST5Y2022.S2401). **_place_** indicates that we're looking at census designated places (generally, cities and towns). **_unit_** indicates they’re at the census unit level.
+These tables break down employment by occupation at various depths, or degrees of granularity based on ACS 5-year estimates of [Occupation by Sex for the Civilian Employed Population 16 Years and Over](https://data.census.gov/table/ACSST5Y2022.S2401). **place** indicates that we're looking at census designated places (generally, cities and towns). **unit** indicates they’re at the census unit level.
 
-The _**{depth} **suffix indicates whether it’s looking at more generalized or more specific categories (i.e., where in the petri dish hierarchy it sits). Higher depth numbers indicate more specific categories, lower depth numbers are more general.
+The **{depth}** suffix indicates whether it’s looking at more generalized or more specific categories (i.e., where in the petri dish hierarchy it sits). Higher depth numbers indicate more specific categories, lower depth numbers are more general.
 
 
 #### Geometry
@@ -190,9 +190,9 @@ Reference [this table](https://data.census.gov/table/ACSST5Y2022.S2401) for colu
 
 ### ind_{area_type}_{depth}
 
-These tables break down employment by industry at various depths, or degrees of granularity based on ACS 5-year estimates of [Industry by Sex for the Civilian Employed Population 16 Years and Older](https://data.census.gov/table/ACSST5Y2022.S2403). **_place_** indicates that we're looking at census designated places (generally, cities and towns). **_unit_** indicates they’re at the census unit level.
+These tables break down employment by industry at various depths, or degrees of granularity based on ACS 5-year estimates of [Industry by Sex for the Civilian Employed Population 16 Years and Older](https://data.census.gov/table/ACSST5Y2022.S2403). **place** indicates that we're looking at census designated places (generally, cities and towns). **unit** indicates they’re at the census unit level.
 
-The _**{depth} **suffix indicates whether it’s looking at more generalized or more specific categories (i.e., where in the petri dish hierarchy it sits). Higher depth numbers indicate more specific categories, lower depth numbers are more general.
+The **{depth}** suffix indicates whether it’s looking at more generalized or more specific categories (i.e., where in the petri dish hierarchy it sits). Higher depth numbers indicate more specific categories, lower depth numbers are more general.
 
 
 #### Geometry
