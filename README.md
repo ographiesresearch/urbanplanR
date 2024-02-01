@@ -22,7 +22,7 @@ Either ‘tracts’ or ‘block groups.’
 + **year – integer** \
 Year of interest. Need to identify ranges for each source. I’ve been using 2021.
 + **format – string** \
-One of “gpkg” (geopackage), “shp”, or “geojson.”
+One of “gpkg” (geopackage), “shp” (shapefile), or “geojson.”
 + **census_api – string** \
 _Optional._ Census API key. It’s good practice to access the Census’s API with a credentialing key, though the scripts will run without one. [Request one here](https://api.census.gov/data/key_signup.html).
 
