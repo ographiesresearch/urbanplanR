@@ -9,22 +9,22 @@ Currently, to set up the automated process, you modify [config.json](https://git
 
 
 
-1. **project – string** \
++ **project – string** \
 Name of the project. Currently, this only appears as the name of the output geopackage (or results folder, if format is ‘shapefile’ or ‘geojson’).
-2. **states – string \
-**Two-character abbreviation of state of interest. Currently, only one state is supported at a time, which might create analytical issues for places at the border.
-3. **placename – string**
-4. Name of place(s) (i.e., municipality) of interest. It/they must be in the state given in ‘states’. Can be a list.
-5. **crs – integer**
-6. Coordinate reference system EPSG code.
-7. **census_unit – string**
-8. Either ‘tracts’ or ‘block groups.’
-9. **year – integer**
-10. Year of interest. Need to identify ranges for each source. I’ve been using 2021.
-11. **format – string**
-12. One of “gpkg” (geopackage), “shp”, or “geojson.”
-13. **census_api – string**
-14. Optional. Census API key. It’s good practice to access the Census’s API with a credentialing key, though the scripts will run without one. [Request one here](https://api.census.gov/data/key_signup.html).
++ **states – string** \
+Two-character abbreviation of state of interest. Currently, only one state is supported at a time, which might create analytical issues for places at the border.
++ **placename – string** \
+Name of place(s) (i.e., municipality) of interest. It/they must be in the state given in ‘states’. Can be a list.
++ **crs – integer** \
+Coordinate reference system EPSG code.
++ **census_unit – string** \
+Either ‘tracts’ or ‘block groups.’
++ **year – integer** \
+Year of interest. Need to identify ranges for each source. I’ve been using 2021.
++ **format – string** \
+One of “gpkg” (geopackage), “shp”, or “geojson.”
++ **census_api – string** \
+Optional. Census API key. It’s good practice to access the Census’s API with a credentialing key, though the scripts will run without one. [Request one here](https://api.census.gov/data/key_signup.html).
 
 
 ## Data Dictionary
@@ -44,20 +44,20 @@ MULTIPOLYGON
 
 
 
-15. **unit_id – string** \
++ **unit_id – string** \
 The unique identifier (AKA the FIPS code, often called the GEOID)
-16. **name – string \
-**Census tract ID.
-17. **stusps - string**
-18. Abbreviated state.
-19. **namelsadco - string**
-20. Name of county.
-21. **pl_id – integer**
-22. Unique identifier of place including the census geography.
-23. **pl_name – string**
-24. Name of the place including the census geography.
-25. **sel – boolean**
-26. Whether geography lies within the selected place.
++ **name – string** \
+Census tract ID.
++ **stusps - string** \
+Abbreviated state.
++ **namelsadco - string** \
+Name of county.
++ **pl_id – integer** \
+Unique identifier of place including the census geography.
++ **pl_name – string** \
+Name of the place including the census geography.
++ **sel – boolean** \
+Whether geography lies within the selected place.
 
 
 ### places_{state} 🌎
@@ -74,10 +74,10 @@ MULTIPOLYGON
 
 
 
-27. **pl_id – integer**
-28. Unique identifier of place including the census geography.
-29. **pl_name – string**
-30. Name of the place including the census geography.
++ **pl_id – integer** \
+Unique identifier of place including the census geography.
++ **pl_name – string** \
+Name of the place including the census geography.
 
 
 ### places_selected 🌎
@@ -94,10 +94,10 @@ MULTIPOLYGON
 
 
 
-31. **pl_id – integer**
-32. Unique identifier of place including the census geography.
-33. **pl_name – string**
-34. Name of the place including the census geography.
++ **pl_id – integer** \
+Unique identifier of place including the census geography.
++ **pl_name – string** \
+Name of the place including the census geography.
 
 
 ### census_unit_lodes
@@ -114,24 +114,22 @@ None. 1-to-1 cardinality with census_unit by “unit_id” in both tables.
 
 
 
-35. **unit_id – string** \
++ **unit_id – string** \
 The unique identifier (AKA the FIPS code, often called the GEOID)
-36. **work_res_{MUNI_NAME} – integer \
-_(optional, only present if there is a selected placename)_** \
++ **work_res_{MUNI_NAME} – integer** \
+_(optional, only present if there is a selected placename)_ \
 The number of workers who work in the selected municipality who commute from a home that lies within the given census geography.
-37. **res_work_{MUNI_NAME} – integer** \
-_(optional, only present if there is a selected placename) \
-_The number of workers who live in the selected municipality who commute to a workplace that lies within given census geography.
-38. **pct_w_in_town – float (%)** \
++ **res_work_{MUNI_NAME} – integer** \
+_(optional, only present if there is a selected placename)_ \
+The number of workers who live in the selected municipality who commute to a workplace that lies within given census geography.
++ **pct_w_in_town – float (%)** \
 The % of workers who work in the census geography who also live in the town that the census area is in.
-39. **pct_w_in_unit – float (%) \
-**The % of workers who work in the census geography who also live in that census geography.
-40. **pct_h_in_town – float (%) \
-**The % of workers who live in the census geography who also live in the town that the census area is in.
-41. **pct_h_in_unit – float (%)** \
++ **pct_w_in_unit – float (%)** \
+The % of workers who work in the census geography who also live in that census geography.
++ **pct_h_in_town – float (%)** \
+The % of workers who live in the census geography who also live in the town that the census area is in.
++ **pct_h_in_unit – float (%)** \
 The % of workers who live in the census geography who also work in that census geography.
-42. 
-
 
 ### lodes_tract_lines 🌎
 
@@ -145,16 +143,11 @@ LINESTRING
 
 #### Fields
 
-**h_unit  – string**
-
++ **h_unit  – string** \
 Census geography of work. 1-to-many cardinality with **census_units **by **unit_hd = h_unit**
-
-**w_unit  – string**
-
++ **w_unit  – string** \
 Census geography of home. 1-to-many cardinality with **census_units **by **unit_id = w_unit**
-
-**count – integer**
-
++ **count – integer** \
 The number of workers commuting from **h_unit** to **w_unit**.
 
 
@@ -170,16 +163,11 @@ LINESTRING
 
 #### Fields
 
-**pl_n_h  – string**
-
++ **pl_n_h  – string** \
 Place name of home. 1-to-many cardinality with **places_{state} **by **pl_name = pl_n_h**
-
-**pl_n_w  – string**
-
++ **pl_n_w  – string** \
 Place name of work. 1-to-many cardinality with **places_{state} **by **pl_name = pl_n_h**
-
-**count – integer**
-
++ **count – integer** \
 The number of workers commuting from pl_n_h to pl_n_w.
 
 
