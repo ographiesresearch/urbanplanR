@@ -121,7 +121,8 @@ census_units_to_places <- function(census_units, place_geo) {
   sf::st_sf(
     census_units_pts |> sf::st_drop_geometry(),
     census_units |> sf::st_geometry()
-    )
+    ) |>
+    sf::st_set_geometry("geometry")
 }
 
 census_units_drop_cols <- function(census_units) {

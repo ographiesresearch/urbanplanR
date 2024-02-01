@@ -23,7 +23,16 @@ run <- function() {
   
   census_unit_locs |>
     dplyr::select(-dplyr::starts_with(c("x", "y"))) |>
-    write_multi(glue::glue("census_{CONFIG$census_unit}")) 
+    dplyr::rename(
+      unit_id = GEOID
+    ) |>
+    dplyr::rename_with(tolower) |>
+    dplyr::select(
+      -c(statefp, countyfp, tractce, affgeoid, namelsad, state_name, lsad, aland, awater)
+    ) |>
+    write_multi(
+      "census_unit"
+      )
   
   od_census_units <- od |>
     lodes_to_census_units(
@@ -42,10 +51,10 @@ run <- function() {
   }
   
   census_units_measured |>
-    write_multi(glue::glue("census_{CONFIG$census_unit}_lodes"))
+    write_multi(glue::glue("census_unit_lodes"))
   
   ods_lines(od_census_units) |>
-    write_multi(glue::glue("lodes_{CONFIG$census_unit}_lines"))
+    write_multi(glue::glue("lodes_unit_lines"))
   
   ods_lines_place_agg(od_census_units) |>
     write_multi("lodes_place_lines")

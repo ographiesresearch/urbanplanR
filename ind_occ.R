@@ -1,3 +1,12 @@
+pct_transform <- function(df, unique_col) {
+  df |>
+    dplyr::group_by(dplyr::across(dplyr::all_of(unique_col))) |>
+    dplyr::mutate(
+      pct = estimate / max(estimate) * 100
+    ) |>
+    dplyr::ungroup()
+}
+
 get_acs_table <- function(table, 
                           states = CONFIG$states, 
                           year = CONFIG$year,
@@ -57,6 +66,9 @@ get_acs_table <- function(table,
         levels_flag ~ list(seq.int(level, max_level, 1)),
         .default = list(level)
       )
+    ) |>
+    dplyr::rename(
+      unit_id = GEOID
     )
 }
 
@@ -66,28 +78,19 @@ process_places <- function(df) {
       city = stringr::str_detect(
         NAME, "city,"
       ),
-      NAME = stringr::str_extract(
+      name = stringr::str_extract(
         NAME,
         glue::glue(".*(?=((CDP|city), {STATE_LONG}$))")
       )
     )
 }
 
-pct_transform <- function(df, unique_col) {
-  df |>
-    dplyr::group_by(dplyr::across(dplyr::all_of(unique_col))) |>
-    dplyr::mutate(
-      pct = estimate / max(estimate) * 100
-    ) |>
-    dplyr::ungroup()
-}
-
-pivot_and_write <- function(df, name, unique_col) {
+pivot_and_write <- function(df, name, unique_cols = c("unit_id")) {
   depths <- unique(df$level)
   depths <- depths[ !depths == 0]
   
   df <- df |>
-    pct_transform(unique_col)
+    pct_transform("unit_id")
   
   for (d in depths) {
     df |>
@@ -95,7 +98,7 @@ pivot_and_write <- function(df, name, unique_col) {
       dplyr::filter(d %in% levels) |>
       dplyr::ungroup() |>
       tidyr::pivot_wider(
-        id_cols = dplyr::all_of(unique_col),
+        id_cols = dplyr::all_of(unique_cols),
         names_from = "label",
         values_from = "pct"
       ) |>
@@ -103,27 +106,27 @@ pivot_and_write <- function(df, name, unique_col) {
   }
 }
 
-get_occupations <- function() {
+get_occupations <- function(census_unit = CONFIG$census_unit) {
   # Industry data from ACS Table S2401: Occupation by Sex for the Civilian 
   # Employed Population 16 Years and Over
   # https://data.census.gov/table/ACSST5Y2022.S2401
-  suppressMessages(get_acs_table("S2401")) |>
-    pivot_and_write(name = "occ", unique_col = "GEOID")
+  suppressMessages(get_acs_table("S2401", census_unit = census_unit)) |>
+    pivot_and_write(name = "occ_unit")
   
   suppressMessages(get_acs_table("S2401", census_unit = "place")) |>
     process_places() |>
-    pivot_and_write(name = "occ_place", unique_col = "NAME")
+    pivot_and_write(name = "occ_place", unique_col = c("unit_id", "name"))
 }
 
-get_industries <- function() {
+get_industries <- function(census_unit = CONFIG$census_unit) {
   # Industry data from ACS Table S2403: Industry by Sex for the Civilian 
   # Employed Population 16 Years and Over
   # https://data.census.gov/table/ACSST5Y2022.S2401
-  suppressMessages(get_acs_table("S2403", census_unit = "place")) |>
+  suppressMessages(get_acs_table("S2403", census_unit = census_unit)) |>
     process_places() |>
-    pivot_and_write(name = "ind", unique_col = "GEOID")
+    pivot_and_write(name = "ind_unit")
   
   suppressMessages(get_acs_table("S2403", census_unit = "place")) |>
     process_places() |>
-    pivot_and_write(name = "ind_place", unique_col = "NAME")
+    pivot_and_write(name = "occ_place", unique_col = c("unit_id", "name"))
 }
