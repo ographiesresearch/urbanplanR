@@ -14,7 +14,7 @@ Name of the project. Currently, this only appears as the name of the output geop
 + **states – string** \
 Two-character abbreviation of state of interest. Currently, only one state is supported at a time, which might create analytical issues for places at the border.
 + **placename – string** \
-Name of place(s) (i.e., municipality) of interest. It/they must be in the state given in ‘states’. Can be a list.
+_Optional._ Name of place(s) (i.e., municipality) of interest. It/they must be in the state given in ‘states’. Can be a list.
 + **crs – integer** \
 Coordinate reference system EPSG code.
 + **census_unit – string** \
@@ -24,7 +24,7 @@ Year of interest. Need to identify ranges for each source. I’ve been using 202
 + **format – string** \
 One of “gpkg” (geopackage), “shp”, or “geojson.”
 + **census_api – string** \
-Optional. Census API key. It’s good practice to access the Census’s API with a credentialing key, though the scripts will run without one. [Request one here](https://api.census.gov/data/key_signup.html).
+_Optional._ Census API key. It’s good practice to access the Census’s API with a credentialing key, though the scripts will run without one. [Request one here](https://api.census.gov/data/key_signup.html).
 
 
 ## Data Dictionary
