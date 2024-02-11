@@ -1,6 +1,9 @@
 CONFIG <- jsonlite::read_json('config.json')
 if ("census_api" %in% names(CONFIG)) {
+  message("Census API key set.")
   suppressMessages(tidycensus::census_api_key(CONFIG$census_api))
+} else {
+  message("No census API key privided. Consider setting `census_api` in `config.json`.")
 }
 
 lehd_census_unit <- function() {

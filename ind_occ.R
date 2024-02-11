@@ -128,13 +128,13 @@ pivot_and_write <- function(df, name, percent = TRUE, unique_cols = c("unit_id")
       dplyr::mutate(
         type = "pct"
       ) |>
-      dplyr::filter()
-    dplyr::bind_rows(
-      df |>
-        dplyr::mutate(
-          type = "count"
-        )
-    )
+      dplyr::filter(label != "Total") |>
+      dplyr::bind_rows(
+        df |>
+          dplyr::mutate(
+            type = "count"
+          )
+      )
   } else {
     df <- df |>
       dplyr::mutate(
@@ -154,10 +154,10 @@ pivot_and_write <- function(df, name, percent = TRUE, unique_cols = c("unit_id")
           label,
           c("[(),:]" = "", "\\-" = " ", "á" = "a", "é" = "e", "í" = "i", "ó" = "o", "ú" = "u", "ü" = "u", "ñ" = "n", "ç" = "c")
         )
-      )  |>
+      ) |>
       tidyr::pivot_wider(
         id_cols = dplyr::all_of("unit_id"),
-        names_from = c(label, type),
+        names_from = c(type, label),
         names_glue = "{type}_{label}",
         values_from = estimate
       ) |>
@@ -200,7 +200,6 @@ get_industries <- function(census_unit = CONFIG$census_unit) {
   # https://data.census.gov/table/ACSST5Y2022.S2401
   suppressMessages(get_acs_table("S2403", census_unit = census_unit)) |>
     process_nested_table() |>
-    process_places() |>
     pivot_and_write(name = "ind_unit")
   
   suppressMessages(get_acs_table("S2403", census_unit = "place")) |>

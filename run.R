@@ -2,8 +2,6 @@ source('globals.R')
 source('lodes.R')
 source('ind_occ.R')
 
-sf::sf_proj_search_paths(paths = './')
-
 run <- function() {
   
   message("Downloading places...")
@@ -32,7 +30,7 @@ run <- function() {
       "census_unit"
       )
   
-  if ("lodes" %in% names(CONFIG$datasets)) {
+  if ("lodes" %in% CONFIG$datasets) {
     message("Downloading and processing LEHD Origin-Destination Employment Statistics (LODES) data...")
     od <- get_lodes() |>
       prep_lodes()
@@ -62,12 +60,12 @@ run <- function() {
     ods_lines_place_agg(od_census_units) |>
       write_multi("lodes_place_lines")
   }
-  if ("occ" %in% names(CONFIG$datasets)) {
+  if ("occ" %in% CONFIG$datasets) {
     message("Downloading ACS occupation estimates...")
     get_occupations()
   }
   
-  if ("ind" %in% names(CONFIG$datasets)) {
+  if ("ind" %in% CONFIG$datasets) {
     message("Downloading ACS industry estimates...")
     get_industries()
   }
