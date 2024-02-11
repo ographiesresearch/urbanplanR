@@ -1,6 +1,6 @@
-source('globals.R')
-source('lodes.R')
-source('ind_occ.R')
+source('R/globals.R')
+source('R/lodes.R')
+source('R/ind_occ.R')
 
 run <- function() {
   
