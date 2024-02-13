@@ -24,7 +24,11 @@ Either ‘tracts’ or ‘block groups.’
 + **year – integer** \
 Year of interest. Need to identify ranges for each source. I’ve been using 2021.
 + **format – string** \
-One of “gpkg” (geopackage), “shp” (shapefile), or “geojson.”
+Output format. Current possible values are...
+    + `“gpkg”`: Geopackage.
+    + `“shp”`: Shapefile.
+    + `“geojson"`: GeoJSON. \
+If `'shp'` or `'geojson'`, non-spatial tables are exported as CSVs.
 + **datasets – array of strings** \
 List of datasets to download and write. Current possible values are...
     + `"lodes"`: Tables derviced from the LEHD origin-destination employment statistics database.
