@@ -5,27 +5,21 @@ source('R/acs.R')
 run <- function() {
   
   message("Downloading places...")
-  place_geo <- place_decision() |>
-    write_multi(glue::glue("places"))
+  place_geo <- place_decision()
   
-  if ("placename" %in% names(CONFIG)) {
-    place_geo |>
-      select_place() |>
-      write_multi("places_selected")
+  if ("placenames" %in% names(CONFIG)) {
+    place_geo <- place_geo |>
+      select_places()
   }
   
-  census_unit_locs <- get_census_units() |> 
+  place_geo |>
+    write_multi("places")
+  
+  census_units <- get_census_units() |> 
     census_units_to_places(place_geo)
   
-  census_unit_locs |>
+  census_units |>
     dplyr::select(-dplyr::starts_with(c("x", "y"))) |>
-    dplyr::rename(
-      unit_id = GEOID
-    ) |>
-    dplyr::rename_with(tolower) |>
-    dplyr::select(
-      -c(statefp, countyfp, tractce, affgeoid, namelsad, state_name, lsad, aland, awater)
-    ) |>
     write_multi(
       "census_unit"
       )
@@ -36,19 +30,25 @@ run <- function() {
       prep_lodes()
     
     od_census_units <- od |>
-      lodes_to_census_units(
-        census_unit_locs |>
-          census_units_drop_cols()
-      )
+      lodes_to_census_units(census_units)
     
     census_units_measured <- od_census_units |>
-      proximity_measures()
+      proximity_measures() |>
+      dplyr::filter(unit_id %in% census_units$unit_id)
     
-    
-    if ("placename" %in% names(CONFIG)) {
-      census_units_measured <- od_census_units |>
-        selected_ods_poly() |>
-        dplyr::left_join(census_units_measured, by="unit_id")
+    # Working up to here for multi-state and multi-place selection.
+    if ("placenames" %in% names(CONFIG)) {
+      census_units_measured <- census_units_measured |>
+          dplyr::full_join(
+            od_census_units |>
+              selected_ods_poly(),
+            by = "unit_id"
+            ) |>
+        dplyr::mutate(
+          dplyr::across(
+            dplyr::where(is.numeric), ~tidyr::replace_na(.x, 0)
+          )
+        )
     }
     
     census_units_measured |>

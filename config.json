@@ -1,7 +1,16 @@
 {
-  "project": "longwood",
-  "states": "MA",
-  "placename": ["Boston"],
+  "project": "salem",
+  "states": ["MA", "ME", "NH", "VT", "CT", "RI"],
+  "placenames": [
+    {
+      "place": "Salem",
+      "state": "MA"
+    },
+    {
+      "place": "Beverly",
+      "state": "MA"
+    }
+  ],
   "crs": 2249,
   "census_unit": "tracts",
   "year": 2021,

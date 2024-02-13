@@ -110,10 +110,6 @@ process_places <- function(df) {
     dplyr::mutate(
       city = stringr::str_detect(
         NAME, "city,"
-      ),
-      name = stringr::str_extract(
-        NAME,
-        glue::glue(".*(?=((CDP|city), {STATE_LONG}$))")
       )
     )
 }
