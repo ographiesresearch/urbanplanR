@@ -7,14 +7,16 @@ So far, the automated workflows download and process data from the **LEHD Origin
 
 Currently, to set up the automated process, you modify [config.json](https://github.com/OGRAPHIES-Research-Design/urban-plannr/blob/main/config.json) with the following parameters:
 
-
-
 + **project – string** \
 Name of the project. Currently, this only appears as the name of the output geopackage (or results folder, if format is ‘shapefile’ or ‘geojson’).
-+ **states – string** \
-Two-character abbreviation of state of interest. Currently, only one state is supported at a time, which might create analytical issues for places at the border.
-+ **placename – string** \
-_Optional._ Name of place(s) (i.e., municipality) of interest. It/they must be in the state given in ‘states’. Can be a list.
++ **states – array of strings** \
+Array of states of interest using standard two-letter abbreviations. This can be understood as the 'region' of study in the broadest sense, allowing for analysis of, for example, commuter flows over state lines.
++ **placenames – array of objects** \
+_Optional._ An object containing towns/cities of interest. It/they must be in the states provided as ‘states’. Each object should have the following two properties...
+    + **place – string** \
+    Name of each town/city of interest.
+    + **state – string** \
+    Two-letter abreviation of state including indicated place.
 + **crs – integer** \
 Coordinate reference system EPSG code.
 + **census_unit – string** \
@@ -23,9 +25,38 @@ Either ‘tracts’ or ‘block groups.’
 Year of interest. Need to identify ranges for each source. I’ve been using 2021.
 + **format – string** \
 One of “gpkg” (geopackage), “shp” (shapefile), or “geojson.”
++ **datasets – array of strings** \
+List of datasets to download and write. Current possible values are...
+    + `"lodes"`: Tables derviced from the LEHD origin-destination employment statistics database.
+    + `"occ"`: Occupation of civilian employed population 16 and over.
+    + `"ind"`: Industry of civilian employed population 16 and over.
 + **census_api – string** \
 _Optional._ Census API key. It’s good practice to access the Census’s API with a credentialing key, though the scripts will run without one. [Request one here](https://api.census.gov/data/key_signup.html).
 
+For example, a `config.json` for a project focused on Salem, MA that also includes adjacent Beverly, MA  as a place of interest (and includes census data for all six states that make up the New England region) would look like this...
+
+```json
+{
+  "project": "salem",
+  "states": ["MA", "ME", "NH", "VT", "CT", "RI"],
+  "placenames": [
+    {
+      "place": "Salem",
+      "state": "MA"
+    },
+    {
+      "place": "Beverly",
+      "state": "MA"
+    }
+  ],
+  "crs": 2249,
+  "census_unit": "tracts",
+  "year": 2021,
+  "format": "gpkg",
+  "datasets": ["lodes", "occ", "ind"],
+  "census_api": "your_api_key"
+}
+```
 
 ## Data Dictionary
 
