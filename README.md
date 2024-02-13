@@ -77,21 +77,15 @@ MULTIPOLYGON
 
 + **unit_id – string** \
 The unique identifier (AKA the FIPS code, often called the GEOID)
-+ **name – string** \
-Census tract ID.
-+ **stusps - string** \
-Abbreviated state.
-+ **namelsadco - string** \
-Name of county.
-+ **pl_id – integer** \
-Unique identifier of place including the census geography.
++ **name_long - string** \
+Place state pair used to uniquely identify tract's place.
 + **pl_name – string** \
 Name of the place including the census geography.
-+ **sel – boolean** \
-Whether geography lies within the selected place.
++ **selected – boolean** \
+Whether geography lies within the selected place(s).
 
 
-### places_{state} 🌎
+### places 🌎
 
 Boundaries of, in the case of Massachusetts, all municipalities and in other cases, census designated places in the selected state.
 
@@ -105,30 +99,14 @@ MULTIPOLYGON
 
 
 
-+ **pl_id – integer** \
-Unique identifier of place including the census geography.
++ **name_long - string** \
+Place state pair used to uniquely identify  place.
 + **pl_name – string** \
-Name of the place including the census geography.
-
-
-### places_selected 🌎
-
-Boundaries of the particular places of interest (there can be more than one).
-
-
-#### Geometry
-
-MULTIPOLYGON
-
-
-#### Fields
-
-
-
-+ **pl_id – integer** \
-Unique identifier of place including the census geography.
-+ **pl_name – string** \
-Name of the place including the census geography.
+Name of the place.
++ **state – string** \
+Two-letter abbreviation of state in which geography falls.
++ **selected – boolean** \
+Whether place is selected.
 
 
 ### census_unit_lodes
@@ -162,9 +140,9 @@ The % of workers who live in the census geography who also live in the town that
 + **pct_h_in_unit – float (%)** \
 The % of workers who live in the census geography who also work in that census geography.
 
-### lodes_tract_lines 🌎
+### lodes_unit_lines 🌎
 
-Non-aggregated tract-to-tract flows based on the LODES data.
+Non-aggregated unit-to-unit flows based on the LODES data.
 
 
 #### Geometry
@@ -176,8 +154,12 @@ LINESTRING
 
 + **h_unit  – string** \
 Census geography of work. 1-to-many cardinality with **census_units **by **unit_hd = h_unit**
++ **h_selected  – boolean** \
+Used to select only commutes from a home in the selected place.
 + **w_unit  – string** \
 Census geography of home. 1-to-many cardinality with **census_units **by **unit_id = w_unit**
++ **w_selected  – boolean** \
+Used to select only commutes to workplaces in the selected place.
 + **count – integer** \
 The number of workers commuting from **h_unit** to **w_unit**.
 
@@ -196,8 +178,12 @@ LINESTRING
 
 + **pl_n_h  – string** \
 Place name of home. 1-to-many cardinality with **places_{state} **by **pl_name = pl_n_h**
++ **h_selected  – boolean** \
+Used to select only commutes from a home in the selected place.
 + **pl_n_w  – string** \
 Place name of work. 1-to-many cardinality with **places_{state} **by **pl_name = pl_n_h**
++ **w_selected  – boolean** \
+Used to select only commutes to workplaces in the selected place.
 + **count – integer** \
 The number of workers commuting from pl_n_h to pl_n_w.
 
