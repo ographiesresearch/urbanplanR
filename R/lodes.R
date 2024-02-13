@@ -209,8 +209,7 @@ prox_workers_in_town <- function(prox) {
       w_tot_in_town = in_town_FALSE + w_in_town,
       pct_w_in_town = w_in_town / w_tot_in_town * 100
     ) |>
-    dplyr::select(-in_town_FALSE) |>
-    dplyr::filter(unit_id %in% pl_w_null)
+    dplyr::select(-in_town_FALSE)
 }
 
 prox_residents_in_unit <- function(prox) {
@@ -257,8 +256,7 @@ prox_residents_in_town <- function(prox) {
       h_tot_in_town = in_town_FALSE + h_in_town,
       pct_h_in_town = h_in_town / h_tot_in_town * 100
     ) |>
-    dplyr::select(-in_town_FALSE) |>
-    dplyr::filter(unit_id %in% pl_h_null)
+    dplyr::select(-in_town_FALSE)
 }
 
 proximity_measures <- function(od_census_units) {
@@ -272,18 +270,6 @@ proximity_measures <- function(od_census_units) {
         in_town = FALSE
       )
     )
-  
-  # List of census units with residents with assigned places
-  pl_h_null <- prox |>
-    dplyr::filter(!is.na(pl_n_h)) |>
-    dplyr::pull(h_unit) |>
-    base::unique()
-  
-  # List of census units with workers with assigned places
-  pl_w_null <- prox |>
-    dplyr::filter(!is.na(pl_n_w)) |>
-    dplyr::pull(w_unit) |>
-    base::unique()
   
   # Commence hacky copypaste...
   # TODO: Fight with dplyr programming.
