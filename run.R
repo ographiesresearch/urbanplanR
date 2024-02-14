@@ -27,6 +27,7 @@ run <- function() {
   
   if ("lodes" %in% CONFIG$datasets) {
     message("Downloading and processing LEHD Origin-Destination Employment Statistics (LODES) data...")
+    lehd_census_unit()
     od <- get_lodes() |>
       prep_lodes()
     
@@ -61,11 +62,13 @@ run <- function() {
       write_multi("lodes_place_lines")
   }
   if ("occ" %in% CONFIG$datasets) {
+    census_census_unit()
     message("Downloading ACS occupation estimates...")
     get_occupations()
   }
   
   if ("ind" %in% CONFIG$datasets) {
+    census_census_unit()
     message("Downloading ACS industry estimates...")
     get_industries()
   }

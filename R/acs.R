@@ -10,6 +10,44 @@ pct_transform <- function(df, unique_col) {
     dplyr::ungroup()
 }
 
+get_acs_vars <- function(vars,
+                         states = CONFIG$states,
+                         year = CONFIG$year,
+                         county = NULL,
+                         census_unit = CONFIG$census_unit,
+                         geometry = TRUE,
+                         crs = CONFIG$crs,
+                         drop_moe = TRUE) {
+  var_values <- unname(vars)
+  df <- tidycensus::get_acs(
+    geography = census_unit,
+    variables = var_values, 
+    year = year,
+    state = states,
+    county = county,
+    geometry = TRUE,
+    cache_table = TRUE,
+    output = "wide"
+  ) |>
+    dplyr::rename_with(~stringr::str_remove(.x, "E$"))
+  if (geometry) {
+    df <- df |>
+      sf::st_transform(crs)
+  }
+  if (drop_moe) {
+    df <- df |>
+      dplyr::select(
+        -tidyselect::ends_with("M")
+      )
+  }
+  if(!is.null(names(vars))) {
+    df <- df |>
+      dplyr::rename(
+        dplyr::all_of(vars)
+      )
+  }
+}
+
 get_acs_table <- function(table, 
                           states = CONFIG$states, 
                           year = CONFIG$year,

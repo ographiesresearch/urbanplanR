@@ -1,3 +1,14 @@
+lehd_census_unit <- function() {
+  if (CONFIG$census_unit %in% c("tract", "tracts")) {
+    CONFIG$census_unit <<- "tract"
+  } else if (CONFIG$census_unit %in% c("block groups", "block group", "bg")) {
+    CONFIG$census_unit <<- "bg"
+  } else {
+    stop("census_unit parameter must be one of 'tracts' or 'block groups'.")
+  }
+  message(glue::glue("Census areal unit set to {CONFIG$census_unit}."))
+}
+
 get_lodes <- function(states = CONFIG$states, 
                       year = CONFIG$year, 
                       census_unit = CONFIG$census_unit) {

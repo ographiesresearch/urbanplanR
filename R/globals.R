@@ -6,18 +6,16 @@ if ("census_api" %in% names(CONFIG)) {
   message("No census API key privided. Consider setting `census_api` in `config.json`.")
 }
 
-lehd_census_unit <- function() {
+census_census_unit <- function() {
   if (CONFIG$census_unit %in% c("tract", "tracts")) {
     CONFIG$census_unit <<- "tract"
   } else if (CONFIG$census_unit %in% c("block groups", "block group", "bg")) {
-    CONFIG$census_unit <<- "bg"
+    CONFIG$census_unit <<- "block group"
   } else {
     stop("census_unit parameter must be one of 'tracts' or 'block groups'.")
   }
   message(glue::glue("Census areal unit set to {CONFIG$census_unit}."))
 }
-
-lehd_census_unit()
 
 options(
   # Suppress `summarise()` has grouped output by 'x'...'z' message.
@@ -294,6 +292,22 @@ place_decision <- function(states = CONFIG$states) {
 remove_coords <- function(df) {
   df |>
     dplyr::select(-dplyr::starts_with(c("x", "y")))
+}
+
+get_water_multistate <- function(states) {
+  water_all <- list()
+  for (st in states) {
+    county_list <- tigris::counties(state = st) |>
+      dplyr::rename_with(tolower) |>
+      sf::st_drop_geometry() |>
+      dplyr::pull(name)
+    water_state <- list()
+    for (county in county_list) {
+      water_state[[county]] <- tigris::area_water(state = st, county = county)
+    }
+    water_all[[st]] <- dplyr::bind_rows(water_state)
+  }
+  df <- dplyr::bind_rows(water_all)
 }
 
 get_census_units <- function(states = CONFIG$states, 
