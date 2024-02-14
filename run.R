@@ -13,13 +13,14 @@ run <- function() {
   }
   
   place_geo |>
+    remove_coords() |>
     write_multi("places")
   
   census_units <- get_census_units() |> 
-    census_units_to_places(place_geo)
+    st_join_max_overlap(place_geo, x_id = "unit_id", y_id = "pl_id")
   
   census_units |>
-    dplyr::select(-dplyr::starts_with(c("x", "y"))) |>
+    remove_coords() |>
     write_multi(
       "census_unit"
       )
@@ -36,7 +37,6 @@ run <- function() {
       proximity_measures() |>
       dplyr::filter(unit_id %in% census_units$unit_id)
     
-    # Working up to here for multi-state and multi-place selection.
     if ("placenames" %in% names(CONFIG)) {
       census_units_measured <- census_units_measured |>
           dplyr::full_join(

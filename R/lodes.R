@@ -78,12 +78,16 @@ xyxy_to_lines <- function(df, crs, names = c("x_h","y_h","x_w","y_w")){
 }
 
 select_places <- function(place_geo) {
-  place_searches <- dplyr::bind_rows(CONFIG$placenames) |>
+  searches <- dplyr::bind_rows(CONFIG$placenames) |>
     dplyr::mutate(
-      place_long = stringr::str_c(place, state, sep=", "),
-      regex = stringr::str_c("^", place_long, "$", sep="")
+      pl_id = stringr::str_c(
+        stringr::str_to_lower(place), 
+        stringr::str_to_lower(state), 
+        sep="_"
+        ),
+      pl_id = stringr::str_c("^", pl_id, "$", sep="")
     ) |>
-    dplyr::pull(regex) |>
+    dplyr::pull(pl_id) |>
     stringr::str_c(collapse="|")
   
   places <- dplyr::bind_rows(CONFIG$placenames) |>
@@ -91,7 +95,7 @@ select_places <- function(place_geo) {
   
   matched <- place_geo |>
     dplyr::mutate(
-      selected = stringr::str_detect(name_long, place_searches)
+      selected = stringr::str_detect(pl_id, searches)
     )
   match_count <- nrow(matched |> dplyr::filter(selected))
   if (match_count == length(CONFIG$placenames)) {
@@ -106,28 +110,29 @@ select_places <- function(place_geo) {
   matched
 }
 
-
-census_units_to_places <- function(census_units, place_geo) {
+st_join_max_overlap <- function(x, y, x_id, y_id) {
   # This is necessary to suppress 'st_point_on_surface assumes attributes are 
   # constant over geometries' warning.
-  sf::st_agr(census_units) <- "constant"
-  sf::st_agr(place_geo) <- "constant"
-  max_int <- census_units |>
+  sf::st_agr(x) <- "constant"
+  sf::st_agr(y) <- "constant"
+  max_int <- x |>
     sf::st_intersection(
-      dplyr::select(place_geo, name_long)
+      dplyr::select(y, tidyselect::all_of(y_id))
     ) |>
     dplyr::mutate(
       area = sf::st_area(geometry)
     ) |>
     sf::st_drop_geometry() |>
-    dplyr::group_by(unit_id) |>
-    dplyr::slice_max(order_by = area) |>
+    dplyr::group_by(
+      dplyr::across(tidyselect::all_of(x_id))
+      ) |>
+    dplyr::slice_max(order_by = area, na_rm = TRUE) |>
     dplyr::ungroup() |>
     dplyr::select(-area)
   
-  census_units |>
-    dplyr::left_join(max_int, by="unit_id") |>
-    dplyr::left_join(sf::st_drop_geometry(place_geo), by="name_long")
+  x |>
+    dplyr::left_join(max_int, by=x_id) |>
+    dplyr::left_join(sf::st_drop_geometry(y), by=y_id)
 }
 
 lodes_to_census_units <- function(df, 
@@ -147,7 +152,7 @@ lodes_to_census_units <- function(df,
           y_w = y,
           x_pl_w = x_pl,
           y_pl_w = y_pl,
-          pl_n_w = name_long,
+          pl_n_w = pl_id,
           dplyr::any_of(c(selected_w = "selected"))
         ), 
       by = c("w_unit" = "unit_id")
@@ -159,7 +164,7 @@ lodes_to_census_units <- function(df,
           y_h = y,
           x_pl_h = x_pl,
           y_pl_h = y_pl,
-          pl_n_h = name_long,
+          pl_n_h = pl_id,
           dplyr::any_of(c(selected_h = "selected"))
         ),
       by = c("h_unit" = "unit_id")

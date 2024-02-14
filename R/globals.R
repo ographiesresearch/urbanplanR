@@ -256,7 +256,11 @@ prep_munis <- function(df) {
       y_pl = y
     ) |>
     dplyr::mutate(
-      name_long = stringr::str_c(pl_name, state, sep = ", ")
+      pl_id = stringr::str_c(
+        stringr::str_to_lower(pl_name), 
+        stringr::str_to_lower(state),
+        sep = "_"
+        )
     )
 }
 
@@ -285,6 +289,11 @@ place_decision <- function(states = CONFIG$states) {
   }
   dplyr::bind_rows(state_munis) |>
     prep_munis()
+}
+
+remove_coords <- function(df) {
+  df |>
+    dplyr::select(-dplyr::starts_with(c("x", "y")))
 }
 
 get_census_units <- function(states = CONFIG$states, 
