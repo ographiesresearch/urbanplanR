@@ -1,4 +1,4 @@
-# UrbanPlanR
+# urbanplanR
 
 So far, the automated workflows download and process data from the **LEHD Origin-Destination Employment Statistics (LODES)** and the **5-year American Community Survey estimates**, including data necessary to produce ‘Petri Dish’ diagrams of place-based employment by industry and occupation. Developed in collaboration with [Utile Architecture and Planning](https://www.utiledesign.com/).
 
