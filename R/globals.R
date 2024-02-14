@@ -124,7 +124,9 @@ get_ma_munis <- function(crs = CONFIG$crs) {
 }
 
 get_shp_from_remote_zip <- function(url, shpfile, crs = CONFIG$crs) {
-  message("Downloading Massachusetts municipal boundaries...")
+  message(
+    glue::glue("Downloading {shpfile} from {url}...")
+    )
   temp <- base::tempfile(fileext = ".zip")
   get_remote_zip(
     url = url,
