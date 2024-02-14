@@ -123,24 +123,17 @@ get_ma_munis <- function(crs = CONFIG$crs) {
     dplyr::select(pl_name = town, state)
 }
 
-# Deprecated solution for downloading zipped shapefile from MassGIS.
-# get_ma_munis <- function(crs = CONFIG$crs) {
-#   message("Downloading Massachusetts municipal boundaries...")
-#   temp <- base::tempfile(fileext = ".zip")
-#   get_remote_zip(
-#     url = "https://s3.us-east-1.amazonaws.com/download.massgis.digital.mass.gov/shapefiles/state/townssurvey_shp.zip",
-#     path = temp
-#   )
-#   read_shp_from_zip(temp, "TOWNSSURVEY_POLYM.shp") |>
-#     dplyr::rename_with(tolower) |>
-#     dplyr::mutate(
-#       town_id = as.character(town_id),
-#       town = stringr::str_to_title(town),
-#       state = "MA"
-#     ) |>
-#     sf::st_transform(crs) |>
-#     dplyr::select(pl_id = town_id, pl_name = town, state)
-# }
+get_shp_from_remote_zip <- function(url, shpfile, crs = CONFIG$crs) {
+  message("Downloading Massachusetts municipal boundaries...")
+  temp <- base::tempfile(fileext = ".zip")
+  get_remote_zip(
+    url = url,
+    path = temp
+  )
+  read_shp_from_zip(temp, shpfile) |>
+    dplyr::rename_with(tolower) |>
+    sf::st_transform(crs)
+}
 
 get_me_munis <- function(crs = CONFIG$crs) {
   message("Downloading Maine municipal boundaries...")
