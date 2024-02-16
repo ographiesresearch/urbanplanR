@@ -87,7 +87,7 @@ run <- function() {
       write_multi("acs_housing")
     
     get_acs_race(census_unit = "place") |>
-      write_multi("acs_race_place")
+      write_multi("acs_housing_place")
   }
   
   get_acs_housing()
