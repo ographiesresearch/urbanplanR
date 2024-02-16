@@ -2,8 +2,12 @@ source('R/globals.R')
 source('R/lodes.R')
 source('R/acs.R')
 
+CONFIG <- jsonlite::read_json('config.json')
+
 run <- function() {
-  
+  set_census_api()
+  lehd_census_unit()
+  tidy_census_units()
   message("Downloading places...")
   place_geo <- place_decision()
   
@@ -27,7 +31,6 @@ run <- function() {
   
   if ("lodes" %in% CONFIG$datasets) {
     message("Downloading and processing LEHD Origin-Destination Employment Statistics (LODES) data...")
-    lehd_census_unit()
     od <- get_lodes() |>
       prep_lodes()
     
@@ -61,18 +64,45 @@ run <- function() {
     ods_lines_place_agg(od_census_units) |>
       write_multi("lodes_place_lines")
   }
+  
+  
+  if ("age" %in% CONFIG$datasets) {
+    get_acs_age() |>
+      write_multi("acs_age")
+    
+    get_acs_age(census_unit = "place") |>
+      write_multi("acs_age_place")
+  }
+  
+  if ("race" %in% CONFIG$datasets) {
+    get_acs_race() |>
+      write_multi("acs_race")
+    
+    get_acs_race(census_unit = "place") |>
+      write_multi("acs_race_place")
+  }
+  
+  if ("housing" %in% CONFIG$datasets) {
+    get_acs_housing() |>
+      write_multi("acs_housing")
+    
+    get_acs_race(census_unit = "place") |>
+      write_multi("acs_race_place")
+  }
+  
+  get_acs_housing()
   if ("occ" %in% CONFIG$datasets) {
-    census_census_unit()
     message("Downloading ACS occupation estimates...")
     get_occupations()
   }
   
   if ("ind" %in% CONFIG$datasets) {
-    census_census_unit()
     message("Downloading ACS industry estimates...")
     get_industries()
   }
 }
+
+
 
 if(!interactive()){
   renv::init()

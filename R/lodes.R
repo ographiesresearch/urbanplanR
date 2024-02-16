@@ -1,17 +1,17 @@
 lehd_census_unit <- function() {
   if (CONFIG$census_unit %in% c("tract", "tracts")) {
-    CONFIG$census_unit <<- "tract"
+    CONFIG$lehd_unit <<- "tract"
   } else if (CONFIG$census_unit %in% c("block groups", "block group", "bg")) {
-    CONFIG$census_unit <<- "bg"
+    CONFIG$lehd_unit <<- "bg"
   } else {
     stop("census_unit parameter must be one of 'tracts' or 'block groups'.")
   }
-  message(glue::glue("Census areal unit set to {CONFIG$census_unit}."))
+  message(glue::glue("LEHD areal unit set to {CONFIG$census_unit}."))
 }
 
 get_lodes <- function(states = CONFIG$states, 
                       year = CONFIG$year, 
-                      census_unit = CONFIG$census_unit) {
+                      census_unit = CONFIG$lehd_unit) {
   lodes_list <- list()
   for (st in states) {
     message(glue::glue("Getting LODES data for {st}."))
@@ -43,7 +43,7 @@ get_lodes <- function(states = CONFIG$states,
 }
 
 prep_lodes <- function(od,
-                       census_unit = CONFIG$census_unit) {
+                       census_unit = CONFIG$lehd_unit) {
   h_col <- stringr::str_c("h", census_unit, sep = "_")
   w_col <- stringr::str_c("w", census_unit, sep = "_")
   od |>
@@ -148,7 +148,7 @@ st_join_max_overlap <- function(x, y, x_id, y_id) {
 
 lodes_to_census_units <- function(df, 
                                   census_units,
-                                  census_unit = CONFIG$census_unit) {
+                                  census_unit = CONFIG$lehd_unit) {
   
   census_units <- census_units |>
     center_xy() |>
