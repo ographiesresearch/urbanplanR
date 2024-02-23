@@ -163,7 +163,7 @@ process_places <- function(df) {
     )
 }
 
-pivot_and_write <- function(df, name, percent = TRUE, unique_cols = c("unit_id")) {
+pivot_and_write <- function(df, name, percent = TRUE, config = NULL) {
   depths <- unique(df$level)
   depths_nonzero <- depths[ !depths == 0 ]
   
@@ -206,16 +206,16 @@ pivot_and_write <- function(df, name, percent = TRUE, unique_cols = c("unit_id")
         names_glue = "{type}_{label}",
         values_from = estimate
       ) |>
-      write_multi(glue::glue("{name}_depth_{d}"))
+      write_multi(glue::glue("{name}_depth_{d}"), config = config)
   }
-  df_out
 }
 
 
 
-get_industries <- function(states,
+get_acs_industries <- function(states,
                            year,
                            census_unit,
+                           county = NULL,
                            crs = 4326,
                            geometry = FALSE) {
   # Industry data from ACS Table S2403: Industry by Sex for the Civilian 
@@ -227,18 +227,13 @@ get_industries <- function(states,
                  state = states,
                  county = county,
                  geometry = geometry) |>
-    process_nested_table() |>
-    pivot_and_write(name = "ind_unit")
-  # 
-  # suppressMessages(get_acs_table("S2403", census_unit = "place")) |>
-  #   process_nested_table() |>
-  #   process_places() |>
-  #   pivot_and_write(name = "ind_place", unique_col = c("unit_id", "name"))
+    process_nested_table()
 }
 
-get_occupations <- function(states,
+get_acs_occupations <- function(states,
                             year,
                             census_unit,
+                            county = NULL,
                             crs = 4326,
                             geometry = FALSE) {
   # Industry data from ACS Table S2401: Occupation by Sex for the Civilian 
@@ -250,36 +245,7 @@ get_occupations <- function(states,
                 state = states,
                 county = county,
                 geometry = geometry) |>
-    process_nested_table() |>
-    pivot_and_write(name = "occ_unit")
-  
-  # suppressMessages(get_acs_table("S2401", census_unit = "place")) |>
-  #   process_nested_table() |>
-  #   process_places() |>
-  #   pivot_and_write(name = "occ_place", unique_col = c("unit_id", "name"))
-}
-
-get_occupations <- function(states,
-                            year,
-                            census_unit,
-                            crs = 4326,
-                            geometry = FALSE) {
-  # Industry data from ACS Table S2401: Occupation by Sex for the Civilian 
-  # Employed Population 16 Years and Over
-  # https://data.census.gov/table/ACSST5Y2022.S2401
-  get_acs_table("S2401", 
-                census_unit = census_unit,
-                year = year,
-                state = states,
-                county = county,
-                geometry = geometry) |>
-    process_nested_table() |>
-    pivot_and_write(name = "occ_unit")
-  
-  # suppressMessages(get_acs_table("S2401", census_unit = "place")) |>
-  #   process_nested_table() |>
-  #   process_places() |>
-  #   pivot_and_write(name = "occ_place", unique_col = c("unit_id", "name"))
+    process_nested_table()
 }
 
 get_acs_ancestry <- function(states,

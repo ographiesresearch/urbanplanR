@@ -151,14 +151,14 @@ lodes_to_census_units <- function(df,
                                   census_units_geo,
                                   census_unit) {
   
-  census_units <- census_units |>
+  census_units_geo <- census_units_geo |>
     center_xy() |>
     sf::st_drop_geometry() |>
     dplyr::select(-c(state, pl_name))
   
   df |>
     dplyr::left_join(
-      census_units |> 
+      census_units_geo |> 
         dplyr::rename(
           x_w = x,
           y_w = y,
@@ -170,7 +170,7 @@ lodes_to_census_units <- function(df,
       by = c("w_unit" = "unit_id")
     ) |>
     dplyr::left_join(
-      census_units |> 
+      census_units_geo |> 
         dplyr::rename(
           x_h = x,
           y_h = y,

@@ -1,7 +1,7 @@
 {
   "project": "beverly_salem",
   "states": ["MA", "ME", "NH", "VT", "CT", "RI"],
-  "placenames": [
+  "places": [
     {
       "place": "Salem",
       "state": "MA"
@@ -15,5 +15,5 @@
   "census_unit": "tracts",
   "year": 2021,
   "format": "gpkg",
-  "datasets": ["age", "race", "housing"]
+  "datasets": ["lodes", "occ", "ind", "age", "race", "housing"]
 }

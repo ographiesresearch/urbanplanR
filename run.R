@@ -22,17 +22,8 @@ run <- function(config = CONFIG) {
     tidy_census_units() |>
     std_format()
   
-  write_with_settings <- function(df, name) {
-    write_multi(
-      df,
-      name,
-      dir_name = config$project, 
-      format = config$format
-    )
-  }
-  
   message("Downloading places...")
-  place_geo <- place_decision(config$states)
+  place_geo <- place_decision(config$states, crs = config$crs)
   
   if ("places" %in% names(config)) {
     place_geo <- place_geo |>
@@ -41,7 +32,7 @@ run <- function(config = CONFIG) {
 
   place_geo |>
     remove_coords() |>
-    write_with_settings("places")
+    write_multi("places", config = config)
 
   census_units <- get_census_units(
     states = config$states,
@@ -53,15 +44,13 @@ run <- function(config = CONFIG) {
 
   census_units |>
     remove_coords() |>
-    write_with_settings(
-      "census_unit"
-      )
+    write_multi("census_unit", config = config)
 
   if ("lodes" %in% config$datasets) {
     message("Downloading and processing LEHD Origin-Destination Employment Statistics (LODES) data...")
     od <- get_lodes(
         states = config$states,
-        year = congig$year,
+        year = config$year,
         census_unit = config$census_unit) |>
       prep_lodes(
         census_unit = config$census_unit
@@ -92,49 +81,77 @@ run <- function(config = CONFIG) {
     }
 
     census_units_measured |>
-      write_with_settings(glue::glue("census_unit_lodes"))
+      write_multi("census_unit_lodes", config = config)
     
     ods_lines(od_census_units, crs = config$crs) |>
-      write_with_settings(glue::glue("lodes_unit_lines"))
+      write_multi("census_unit_lodes_lines", config = config)
     
     ods_lines_place_agg(od_census_units, crs = config$crs) |>
-      write_with_settings("lodes_place_lines")
+      write_multi("place_lodes_lines", config = config)
   }
-  # 
-  # 
-  # if ("age" %in% CONFIG$datasets) {
-  #   get_acs_age() |>
-  #     write_with_settings("acs_age")
-  #   
-  #   get_acs_age(census_unit = "place") |>
-  #     write_with_settings("acs_age_place")
-  # }
-  # 
-  # if ("race" %in% CONFIG$datasets) {
-  #   get_acs_race() |>
-  #     write_with_settings("acs_race")
-  #   
-  #   get_acs_race(census_unit = "place") |>
-  #     write_with_settings("acs_race_place")
-  # }
-  # 
-  # if ("housing" %in% CONFIG$datasets) {
-  #   get_acs_housing() |>
-  #     write_with_settings("acs_housing")
-  #   
-  #   get_acs_housing(census_unit = "place") |>
-  #     write_with_settings("acs_housing_place")
-  # }
-  # 
-  # if ("occ" %in% CONFIG$datasets) {
-  #   message("Downloading ACS occupation estimates...")
-  #   get_occupations()
-  # }
-  # 
-  # if ("ind" %in% CONFIG$datasets) {
-  #   message("Downloading ACS industry estimates...")
-  #   get_industries()
-  # }
+
+
+  if ("age" %in% config$datasets) {
+    get_acs_age(states = config$states,
+                year = config$year,
+                census_unit = config$census_unit) |>
+      write_multi("census_unit_acs_age", config = config)
+
+    get_acs_age(states = config$states,
+                year = config$year,
+                census_unit = "place") |>
+      write_multi("place_acs_age", config = config)
+  }
+
+  if ("race" %in% config$datasets) {
+    get_acs_race(states = config$states,
+                 year = config$year,
+                 census_unit = config$census_unit) |>
+      write_multi("census_unit_acs_race", config = config)
+
+    get_acs_race(states = config$states,
+                 year = config$year,
+                 census_unit = "place")  |>
+      write_multi("place_acs_race", config = config)
+  }
+
+  if ("housing" %in% config$datasets) {
+    get_acs_housing(states = config$states,
+                    year = config$year,
+                    census_unit = config$census_unit) |>
+      write_multi("census_unit_acs_housing", config = config)
+
+    get_acs_housing(states = config$states,
+                    year = config$year,
+                    census_unit = "place")|>
+      write_multi("place_acs_housing", config = config)
+  }
+
+  if ("occ" %in% config$datasets) {
+    message("Downloading ACS occupation estimates...")
+    get_acs_occupations(states = config$states,
+                    year = config$year,
+                    census_unit = config$census_unit) |>
+      pivot_and_write(name = "census_unit_acs_occ", config = config)
+    
+    get_acs_occupations(states = config$states,
+                    year = config$year,
+                    census_unit = "place") |>
+      pivot_and_write(name = "place_acs_occ", config = config)
+  }
+
+  if ("ind" %in% config$datasets) {
+    message("Downloading ACS industry estimates...")
+    get_acs_industries(states = config$states,
+                   year = config$year,
+                   census_unit = config$census_unit)  |>
+      pivot_and_write(name = "census_unit_acs_ind", config = config)
+    
+    get_acs_industries(states = config$states,
+                    year = config$year,
+                    census_unit = "place") |>
+      pivot_and_write(name = "place_acs_ind", config = config)
+  }
 }
 
 if(!interactive()){

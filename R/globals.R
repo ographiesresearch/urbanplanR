@@ -37,9 +37,13 @@ std_format <- function(config) {
 
 write_multi <- function(df, 
                         name, 
-                        dir_name, 
-                        format) {
-  
+                        dir_name = NULL, 
+                        format = NULL,
+                        config = NULL) {
+  if (!is.null(config)) {
+    dir_name <- config$project
+    format <- config$format
+  }
   message(glue::glue("Writing {name}."))
   if (format == "gpkg") {
     sf::st_write(
@@ -97,7 +101,7 @@ get_from_arc <- function(dataset, crs) {
 
 get_ma_munis <- function(crs) {
   message("Downloading Massachusetts municipal boundaries...")
-  get_from_arc("43664de869ca4b06a322c429473c65e5_0") |>
+  get_from_arc("43664de869ca4b06a322c429473c65e5_0", crs = crs) |>
     dplyr::mutate(
       town = stringr::str_to_title(town),
       state = "MA"
@@ -121,7 +125,7 @@ get_shp_from_remote_zip <- function(url, shpfile, crs) {
 
 get_me_munis <- function(crs) {
   message("Downloading Maine municipal boundaries...")
-  get_from_arc("289a91e826fd4f518debdd824d5dd16d_0") |>
+  get_from_arc("289a91e826fd4f518debdd824d5dd16d_0", crs = crs) |>
     dplyr::filter(
       town != " "
     ) |>
@@ -137,7 +141,7 @@ get_me_munis <- function(crs) {
 
 get_nh_munis <- function(crs) {
   message("Downloading New Hampshire municipal boundaries...")
-  get_from_arc("4edf75ab263b4d92996f92fb9cf435fa_8") |>
+  get_from_arc("4edf75ab263b4d92996f92fb9cf435fa_8", crs = crs) |>
     dplyr::filter(
       pbpname != " "
     ) |>
@@ -149,7 +153,7 @@ get_nh_munis <- function(crs) {
 
 get_vt_munis <- function(crs) {
   message("Downloading Vermont municipal boundaries...")
-  get_from_arc("3f464b0e1980450e9026430a635bff0a_0") |>
+  get_from_arc("3f464b0e1980450e9026430a635bff0a_0", crs = crs) |>
     dplyr::filter(
       townnamemc != " "
     ) |>
@@ -161,7 +165,7 @@ get_vt_munis <- function(crs) {
 
 get_ct_munis <- function(crs) {
   message("Downloading Connecticut municipal boundaries...")
-  get_from_arc("df1f6d681b7e41dca8bdd03fc9ae0dd6_1") |>
+  get_from_arc("df1f6d681b7e41dca8bdd03fc9ae0dd6_1", crs = crs) |>
     dplyr::filter(
       town != " ", town != ""
     ) |>
@@ -177,7 +181,7 @@ get_ct_munis <- function(crs) {
 
 get_ri_munis <- function(crs) {
   message("Downloading Rhode Island municipal boundaries...")
-  get_from_arc("957468e8bb3245e8b3321a7bf3b6d4aa_0") |>
+  get_from_arc("957468e8bb3245e8b3321a7bf3b6d4aa_0", crs = crs) |>
     dplyr::filter(
       name != " ", name != ""
     ) |>
@@ -260,7 +264,7 @@ place_decision <- function(states, crs) {
     }
   }
   if (length(no_muni_st) > 0) {
-    state_munis[["Other"]] <- get_places(states = no_muni_st)
+    state_munis[["Other"]] <- get_places(states = no_muni_st, crs = crs)
   }
   dplyr::bind_rows(state_munis) |>
     prep_munis()
