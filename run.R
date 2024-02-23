@@ -9,9 +9,7 @@ options(
   readr.show_progress = FALSE
 )
 
-CONFIG <- jsonlite::read_json('config.json')
-
-run <- function(config = CONFIG) {
+run <- function(config) {
   if (class(config) == "character") {
     config <- jsonlite::read_json(config)
   }
@@ -156,5 +154,5 @@ run <- function(config = CONFIG) {
 
 if(!interactive()){
   renv::init()
-  run()
+  run(get_config(commandArgs(trailingOnly = TRUE)))
 }

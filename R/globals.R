@@ -8,6 +8,19 @@ set_census_api <- function(config) {
   config
 }
 
+get_config <- function(args) {
+  if (length(args) > 0) {
+    if (class(args[1]) != "character") {
+      stop("Expected the name of a configuration json, as a string")
+    } else {
+      config_json <- args[1]
+    }
+  } else {
+    config_json <- 'config.json'
+  }
+  config_json
+}
+
 tidy_census_units <- function(config) {
   if (config$census_unit %in% c("tract", "tracts")) {
     config$census_unit <- "tract"
