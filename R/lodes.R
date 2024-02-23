@@ -332,7 +332,7 @@ selected_ods_poly <- function(od_census_units) {
 
 ods_lines <- function(od_census_units, crs) {
   if (
-    (sum(od_census_units$selected_h) > 0) | (sum(od_census_units$selected) > 0)
+    ("selected_h" %in% names(od_census_units)) & ("selected_w" %in% names(od_census_units))
     ) {
     od_census_units <- od_census_units |>
       dplyr::filter(selected_h | selected_w)
@@ -358,7 +358,7 @@ ods_lines <- function(od_census_units, crs) {
 
 ods_lines_place_agg <- function(od_census_units, crs) {
   if (
-      (sum(od_census_units$selected_h) > 0) | (sum(od_census_units$selected) > 0)
+      ("selected_h" %in% names(od_census_units)) & ("selected_w" %in% names(od_census_units))
     ) {
     od_census_units <- od_census_units |>
       dplyr::filter(selected_h | selected_w)
