@@ -2,46 +2,82 @@ source('R/globals.R')
 source('R/lodes.R')
 source('R/acs.R')
 
+options(
+  # Suppress `summarise()` has grouped output by 'x'...'z' message.
+  dplyr.summarise.inform = FALSE,
+  # Suppress read/write CSV progress bar.
+  readr.show_progress = FALSE
+)
+
 CONFIG <- jsonlite::read_json('config.json')
 
-run <- function() {
-  set_census_api()
-  lehd_census_unit()
-  tidy_census_units()
-  message("Downloading places...")
-  place_geo <- place_decision()
-  
-  if ("placenames" %in% names(CONFIG)) {
-    place_geo <- place_geo |>
-      select_places()
+run <- function(config = CONFIG) {
+  if (class(config) == "character") {
+    config <- jsonlite::read_json(config)
   }
   
+  config <- config |>
+    set_census_api() |>
+    lehd_census_units() |>
+    tidy_census_units() |>
+    std_format()
+  
+  write_with_settings <- function(df, name) {
+    write_multi(
+      df,
+      name,
+      dir_name = config$project, 
+      format = config$format
+    )
+  }
+  
+  message("Downloading places...")
+  place_geo <- place_decision(config$states)
+  
+  if ("places" %in% names(config)) {
+    place_geo <- place_geo |>
+      select_places(places = config$places)
+  }
+
   place_geo |>
     remove_coords() |>
-    write_multi("places")
-  
-  census_units <- get_census_units() |> 
+    write_with_settings("places")
+
+  census_units <- get_census_units(
+    states = config$states,
+    year = config$year,
+    crs = config$crs,
+    census_unit = config$census_unit
+    ) |>
     st_join_max_overlap(place_geo, x_id = "unit_id", y_id = "pl_id")
-  
+
   census_units |>
     remove_coords() |>
-    write_multi(
+    write_with_settings(
       "census_unit"
       )
-  
-  if ("lodes" %in% CONFIG$datasets) {
+
+  if ("lodes" %in% config$datasets) {
     message("Downloading and processing LEHD Origin-Destination Employment Statistics (LODES) data...")
-    od <- get_lodes() |>
-      prep_lodes()
-    
+    od <- get_lodes(
+        states = config$states,
+        year = congig$year,
+        census_unit = config$census_unit) |>
+      prep_lodes(
+        census_unit = config$census_unit
+      )
+
     od_census_units <- od |>
-      lodes_to_census_units(census_units)
-    
+      lodes_to_census_units(
+        census_units_geo = census_units,
+        census_unit = config$census_unit
+        )
+
     census_units_measured <- od_census_units |>
       proximity_measures() |>
       dplyr::filter(unit_id %in% census_units$unit_id)
-    
-    if ("placenames" %in% names(CONFIG)) {
+
+    if ("places" %in% names(config)) {
       census_units_measured <- census_units_measured |>
           dplyr::full_join(
             od_census_units |>
@@ -54,55 +90,52 @@ run <- function() {
           )
         )
     }
-    
+
     census_units_measured |>
-      write_multi(glue::glue("census_unit_lodes"))
+      write_with_settings(glue::glue("census_unit_lodes"))
     
-    ods_lines(od_census_units) |>
-      write_multi(glue::glue("lodes_unit_lines"))
+    ods_lines(od_census_units, crs = config$crs) |>
+      write_with_settings(glue::glue("lodes_unit_lines"))
     
-    ods_lines_place_agg(od_census_units) |>
-      write_multi("lodes_place_lines")
+    ods_lines_place_agg(od_census_units, crs = config$crs) |>
+      write_with_settings("lodes_place_lines")
   }
-  
-  
-  if ("age" %in% CONFIG$datasets) {
-    get_acs_age() |>
-      write_multi("acs_age")
-    
-    get_acs_age(census_unit = "place") |>
-      write_multi("acs_age_place")
-  }
-  
-  if ("race" %in% CONFIG$datasets) {
-    get_acs_race() |>
-      write_multi("acs_race")
-    
-    get_acs_race(census_unit = "place") |>
-      write_multi("acs_race_place")
-  }
-  
-  if ("housing" %in% CONFIG$datasets) {
-    get_acs_housing() |>
-      write_multi("acs_housing")
-    
-    get_acs_race(census_unit = "place") |>
-      write_multi("acs_housing_place")
-  }
-  
-  get_acs_housing()
-  if ("occ" %in% CONFIG$datasets) {
-    message("Downloading ACS occupation estimates...")
-    get_occupations()
-  }
-  
-  if ("ind" %in% CONFIG$datasets) {
-    message("Downloading ACS industry estimates...")
-    get_industries()
-  }
+  # 
+  # 
+  # if ("age" %in% CONFIG$datasets) {
+  #   get_acs_age() |>
+  #     write_with_settings("acs_age")
+  #   
+  #   get_acs_age(census_unit = "place") |>
+  #     write_with_settings("acs_age_place")
+  # }
+  # 
+  # if ("race" %in% CONFIG$datasets) {
+  #   get_acs_race() |>
+  #     write_with_settings("acs_race")
+  #   
+  #   get_acs_race(census_unit = "place") |>
+  #     write_with_settings("acs_race_place")
+  # }
+  # 
+  # if ("housing" %in% CONFIG$datasets) {
+  #   get_acs_housing() |>
+  #     write_with_settings("acs_housing")
+  #   
+  #   get_acs_housing(census_unit = "place") |>
+  #     write_with_settings("acs_housing_place")
+  # }
+  # 
+  # if ("occ" %in% CONFIG$datasets) {
+  #   message("Downloading ACS occupation estimates...")
+  #   get_occupations()
+  # }
+  # 
+  # if ("ind" %in% CONFIG$datasets) {
+  #   message("Downloading ACS industry estimates...")
+  #   get_industries()
+  # }
 }
-
-
 
 if(!interactive()){
   renv::init()

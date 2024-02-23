@@ -11,12 +11,12 @@ pct_transform <- function(df, unique_col) {
 }
 
 get_acs_vars <- function(vars,
-                         states = CONFIG$states,
-                         year = CONFIG$year,
+                         states,
+                         year,
+                         census_unit,
+                         crs = 4326,
                          county = NULL,
-                         census_unit = CONFIG$census_unit,
                          geometry = TRUE,
-                         crs = CONFIG$crs,
                          drop_moe = TRUE) {
   var_values <- unname(vars)
   df <- tidycensus::get_acs(
@@ -53,9 +53,12 @@ get_acs_vars <- function(vars,
 }
 
 get_acs_table <- function(table, 
-                          states = CONFIG$states, 
-                          year = CONFIG$year,
-                          census_unit = CONFIG$census_unit,
+                          states,
+                          year,
+                          census_unit,
+                          crs = 4326,
+                          county = NULL,
+                          geometry = TRUE,
                           var_match = "",
                           var_suffix = TRUE) {
   df <- tidycensus::get_acs(
@@ -63,7 +66,8 @@ get_acs_table <- function(table,
       table = table, 
       year = year,
       state = states,
-      geometry = FALSE,
+      county = county,
+      geometry = geometry,
       cache_table = TRUE
     ) |>
     dplyr::filter(
@@ -112,6 +116,10 @@ get_acs_table <- function(table,
       dplyr::filter(
         stringr::str_detect(variable, pattern = var_match)
       )
+  }
+  if (geometry) {
+    df <- df |>
+      sf::st_transform(crs)
   }
   df
 }
@@ -203,36 +211,113 @@ pivot_and_write <- function(df, name, percent = TRUE, unique_cols = c("unit_id")
   df_out
 }
 
-get_occupations <- function(census_unit = CONFIG$census_unit) {
+
+
+get_industries <- function(states,
+                           year,
+                           census_unit,
+                           crs = 4326,
+                           geometry = FALSE) {
+  # Industry data from ACS Table S2403: Industry by Sex for the Civilian 
+  # Employed Population 16 Years and Over
+  # https://data.census.gov/table/ACSST5Y2022.S2401
+  get_acs_table("S2403", 
+                 census_unit = census_unit,
+                 year = year,
+                 state = states,
+                 county = county,
+                 geometry = geometry) |>
+    process_nested_table() |>
+    pivot_and_write(name = "ind_unit")
+  # 
+  # suppressMessages(get_acs_table("S2403", census_unit = "place")) |>
+  #   process_nested_table() |>
+  #   process_places() |>
+  #   pivot_and_write(name = "ind_place", unique_col = c("unit_id", "name"))
+}
+
+get_occupations <- function(states,
+                            year,
+                            census_unit,
+                            crs = 4326,
+                            geometry = FALSE) {
   # Industry data from ACS Table S2401: Occupation by Sex for the Civilian 
   # Employed Population 16 Years and Over
   # https://data.census.gov/table/ACSST5Y2022.S2401
-  suppressMessages(get_acs_table("S2401", census_unit = census_unit)) |>
+  get_acs_table("S2401", 
+                census_unit = census_unit,
+                year = year,
+                state = states,
+                county = county,
+                geometry = geometry) |>
     process_nested_table() |>
     pivot_and_write(name = "occ_unit")
   
-  suppressMessages(get_acs_table("S2401", census_unit = "place")) |>
-    process_nested_table() |>
-    process_places() |>
-    pivot_and_write(name = "occ_place", unique_col = c("unit_id", "name"))
+  # suppressMessages(get_acs_table("S2401", census_unit = "place")) |>
+  #   process_nested_table() |>
+  #   process_places() |>
+  #   pivot_and_write(name = "occ_place", unique_col = c("unit_id", "name"))
 }
 
-get_occupations <- function(census_unit = CONFIG$census_unit) {
+get_occupations <- function(states,
+                            year,
+                            census_unit,
+                            crs = 4326,
+                            geometry = FALSE) {
   # Industry data from ACS Table S2401: Occupation by Sex for the Civilian 
   # Employed Population 16 Years and Over
   # https://data.census.gov/table/ACSST5Y2022.S2401
-  suppressMessages(get_acs_table("S2401", census_unit = census_unit)) |>
+  get_acs_table("S2401", 
+                census_unit = census_unit,
+                year = year,
+                state = states,
+                county = county,
+                geometry = geometry) |>
     process_nested_table() |>
     pivot_and_write(name = "occ_unit")
   
-  suppressMessages(get_acs_table("S2401", census_unit = "place")) |>
-    process_nested_table() |>
-    process_places() |>
-    pivot_and_write(name = "occ_place", unique_col = c("unit_id", "name"))
+  # suppressMessages(get_acs_table("S2401", census_unit = "place")) |>
+  #   process_nested_table() |>
+  #   process_places() |>
+  #   pivot_and_write(name = "occ_place", unique_col = c("unit_id", "name"))
 }
 
-get_acs_housing <- function(census_unit = CONFIG$census_unit) {
+get_acs_ancestry <- function(states,
+                             year,
+                             census_unit,
+                             crs = 4326,
+                             geometry = FALSE) {
+  get_acs_table("B04006",
+                census_unit = census_unit,
+                year = year,
+                state = states,
+                county = county,
+                geometry = geometry,
+                var_suffix = FALSE)
+}
+
+get_acs_place_of_birth <- function(states,
+                                   year,
+                                   census_unit,
+                                   crs = 4326,
+                                   geometry = FALSE) {
+  get_acs_table("B05006",
+                census_unit = census_unit,
+                year = year,
+                state = states,
+                county = county,
+                geometry = geometry,
+                var_suffix = FALSE)
+}
+
+get_acs_housing <- function(states,
+                            year,
+                            census_unit,
+                            crs = 4326,
+                            geometry = FALSE) {
   vars <- c("hsg_unts" = "B25024_001",
+            # Tenure by bedrooms.
+            # Owner-occupied...
             "oo" = "B25042_002",
             "oo0br" = "B25042_003",
             "oo1br" = "B25042_004",
@@ -240,6 +325,7 @@ get_acs_housing <- function(census_unit = CONFIG$census_unit) {
             "oo3br" = "B25042_006",
             "oo4br" = "B25042_007",
             "oogt5br" = "B25042_008",
+            # Renter-occupied...
             "ro" = "B25042_009",
             "ro0br" = "B25042_010",
             "ro1br" = "B25042_011",
@@ -247,6 +333,7 @@ get_acs_housing <- function(census_unit = CONFIG$census_unit) {
             "ro3br" = "B25042_013",
             "ro4br" = "B25042_014",
             "rogt5br" = "B25042_015",
+            # Units in Structure
             "unt1d" = "B25024_002",
             "unt1a" = "B25024_003",
             "unt2" = "B25024_004",
@@ -257,8 +344,7 @@ get_acs_housing <- function(census_unit = CONFIG$census_unit) {
             "unt50up" = "B25024_009",
             "untmbl" = "B25024_010",
             "untbtrv" = "B25024_011",
-            "untown" = "B25012_002",
-            "untrnt" = "B25012_010",
+            # Median Gross Rent by Bedrooms
             "mgr" = "B25031_001",
             "mgr0br" = "B25031_002",
             "mgr1br" = "B25031_003",
@@ -267,10 +353,19 @@ get_acs_housing <- function(census_unit = CONFIG$census_unit) {
             "mgr4br" = "B25031_006",
             "mgrgt5br" = "B25031_007"
             )
-  get_acs_vars(vars, census_unit = census_unit, geometry = FALSE)
+  get_acs_vars(vars, 
+               states = states,
+               year = year,
+               census_unit = census_unit,
+               geometry = geometry
+               )
 }
 
-get_acs_race <- function(census_unit = CONFIG$census_unit) {
+get_acs_race <- function(states,
+                         year,
+                         census_unit,
+                         crs = 4326,
+                         geometry = FALSE) {
   vars <- c(
     "white" = "B03002_003",
     "black" = "B03002_004",
@@ -306,10 +401,19 @@ get_acs_race <- function(census_unit = CONFIG$census_unit) {
     "mti_mhi" = "B19013G_001",
     "hslt_mhi" = "B19013I_001"
   )
-  get_acs_vars(vars, census_unit = census_unit, geometry = FALSE)
+  get_acs_vars(vars, 
+               states = states,
+               year = year,
+               census_unit = census_unit,
+               geometry = geometry
+  )
 }
 
-get_acs_age <- function(census_unit = CONFIG$census_unit) {
+get_acs_age <- function(states,
+                        year,
+                        census_unit,
+                        crs = 4326,
+                        geometry = FALSE) {
   vars <- c(
     "tot" = "B01001A_001",
     "mtot" = "B01001A_002",
@@ -342,7 +446,13 @@ get_acs_age <- function(census_unit = CONFIG$census_unit) {
     "f65_74" = "B01001A_029",
     "f75_84" = "B01001A_030",
     "fgt85" = "B01001A_031")
-  get_acs_vars(vars, census_unit = census_unit, geometry = FALSE) |>
+  
+  get_acs_vars(vars, 
+               states = states,
+               year = year,
+               census_unit = census_unit,
+               geometry = geometry
+    )|>
     dplyr::mutate(
       tlt5 = rowSums(dplyr::across(dplyr::matches("lt5")), na.rm = TRUE),
       t5_9 = rowSums(dplyr::across(dplyr::matches("5_9")), na.rm = TRUE),
@@ -373,18 +483,4 @@ get_acs_age <- function(census_unit = CONFIG$census_unit) {
       tidyselect::starts_with("f"),
       tidyselect::starts_with("m")
     )
-}
-
-get_industries <- function(census_unit = CONFIG$census_unit) {
-  # Industry data from ACS Table S2403: Industry by Sex for the Civilian 
-  # Employed Population 16 Years and Over
-  # https://data.census.gov/table/ACSST5Y2022.S2401
-  suppressMessages(get_acs_table("S2403", census_unit = census_unit)) |>
-    process_nested_table() |>
-    pivot_and_write(name = "ind_unit")
-  
-  suppressMessages(get_acs_table("S2403", census_unit = "place")) |>
-    process_nested_table() |>
-    process_places() |>
-    pivot_and_write(name = "ind_place", unique_col = c("unit_id", "name"))
 }

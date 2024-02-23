@@ -1,63 +1,44 @@
-set_census_api <- function() {
-  if ("census_api" %in% names(CONFIG)) {
+set_census_api <- function(config) {
+  if ("census_api" %in% names(config)) {
     message("Census API key set.")
-    suppressMessages(tidycensus::census_api_key(CONFIG$census_api))
+    suppressMessages(tidycensus::census_api_key(config$census_api))
   } else {
     message("No census API key privided. Consider setting `census_api` in `config.json`.")
   }
+  config
 }
 
-census_census_unit <- function() {
-  if (CONFIG$census_unit %in% c("tract", "tracts")) {
-    CONFIG$census_unit <<- "tract"
-  } else if (CONFIG$census_unit %in% c("block groups", "block group", "bg")) {
-    CONFIG$census_unit <<- "block group"
+tidy_census_units <- function(config) {
+  if (config$census_unit %in% c("tract", "tracts")) {
+    config$census_unit <- "tract"
+  } else if (configG$census_unit %in% c("block groups", "block group", "bg")) {
+    config$census_unit <- "cbg"
   } else {
     stop("census_unit parameter must be one of 'tracts' or 'block groups'.")
   }
-  message(glue::glue("Census areal unit set to {CONFIG$census_unit}."))
+  message(glue::glue("Census areal unit set to {config$census_unit}."))
+  config
 }
 
-options(
-  # Suppress `summarise()` has grouped output by 'x'...'z' message.
-  dplyr.summarise.inform = FALSE,
-  # Suppress read/write CSV progress bar.
-  readr.show_progress = FALSE
-  )
 
-
-STATE_LONG <- state.name[match(CONFIG$states,state.abb)]
-
-std_format <- function() {
-  if (CONFIG$format %in% c("shapefile", "shp")) {
-    CONFIG$format <<- "shp"
-  } else if (CONFIG$format %in% c("geopackage", "gpkg")) {
-    CONFIG$format <<- "gpkg"
-  } else if (CONFIG$format %in% c("geojson", "json")) {
-    CONFIG$format <<- "geojson"
+std_format <- function(config) {
+  if (config$format %in% c("shapefile", "shp")) {
+    config$format <- "shp"
+  } else if (config$format %in% c("geopackage", "gpkg")) {
+    config$format <- "gpkg"
+  } else if (config$format %in% c("geojson", "json")) {
+    config$format <- "geojson"
   } else {
     stop("'format' parameter must be one of 'shp', 'gpkg', or 'geojson'.")
   }
-  message(glue::glue("Output format set to {CONFIG$format}."))
-}
-
-std_format()
-
-tidy_census_units <- function() {
-  if (CONFIG$census_unit %in% c("tract", "tracts")) {
-    CONFIG$census_unit <<- "tract"
-  } else if (CONFIG$census_unit %in% c("block groups", "block group", "bg")) {
-    CONFIG$census_unit <<- "cbg"
-  } else {
-    stop("census_unit parameter must be one of 'tracts' or 'block groups'.")
-  }
-  message(glue::glue("Census areal unit set to {CONFIG$census_unit}."))
+  message(glue::glue("Output format set to {config$format}."))
+  config
 }
 
 write_multi <- function(df, 
                         name, 
-                        dir_name = CONFIG$project, 
-                        format = CONFIG$format) {
+                        dir_name, 
+                        format) {
   
   message(glue::glue("Writing {name}."))
   if (format == "gpkg") {
@@ -103,7 +84,7 @@ read_shp_from_zip <- function(path, layer) {
   sf::st_read(path, quiet=TRUE)
 }
 
-get_from_arc <- function(dataset, crs = CONFIG$crs) {
+get_from_arc <- function(dataset, crs) {
   prefix <- "https://opendata.arcgis.com/api/v3/datasets/"
   suffix <- "/downloads/data?format=geojson&spatialRefId=4326&where=1=1"
   sf::st_read(
@@ -114,7 +95,7 @@ get_from_arc <- function(dataset, crs = CONFIG$crs) {
 }
 
 
-get_ma_munis <- function(crs = CONFIG$crs) {
+get_ma_munis <- function(crs) {
   message("Downloading Massachusetts municipal boundaries...")
   get_from_arc("43664de869ca4b06a322c429473c65e5_0") |>
     dplyr::mutate(
@@ -124,7 +105,7 @@ get_ma_munis <- function(crs = CONFIG$crs) {
     dplyr::select(pl_name = town, state)
 }
 
-get_shp_from_remote_zip <- function(url, shpfile, crs = CONFIG$crs) {
+get_shp_from_remote_zip <- function(url, shpfile, crs) {
   message(
     glue::glue("Downloading {shpfile} from {url}...")
     )
@@ -138,7 +119,7 @@ get_shp_from_remote_zip <- function(url, shpfile, crs = CONFIG$crs) {
     sf::st_transform(crs)
 }
 
-get_me_munis <- function(crs = CONFIG$crs) {
+get_me_munis <- function(crs) {
   message("Downloading Maine municipal boundaries...")
   get_from_arc("289a91e826fd4f518debdd824d5dd16d_0") |>
     dplyr::filter(
@@ -154,7 +135,7 @@ get_me_munis <- function(crs = CONFIG$crs) {
     )
 }
 
-get_nh_munis <- function(crs = CONFIG$crs) {
+get_nh_munis <- function(crs) {
   message("Downloading New Hampshire municipal boundaries...")
   get_from_arc("4edf75ab263b4d92996f92fb9cf435fa_8") |>
     dplyr::filter(
@@ -166,7 +147,7 @@ get_nh_munis <- function(crs = CONFIG$crs) {
     dplyr::select(pl_name = pbpname, state)
 }
 
-get_vt_munis <- function(crs = CONFIG$crs) {
+get_vt_munis <- function(crs) {
   message("Downloading Vermont municipal boundaries...")
   get_from_arc("3f464b0e1980450e9026430a635bff0a_0") |>
     dplyr::filter(
@@ -178,7 +159,7 @@ get_vt_munis <- function(crs = CONFIG$crs) {
     dplyr::select(pl_name = townnamemc, state)
 }
 
-get_ct_munis <- function(crs = CONFIG$crs) {
+get_ct_munis <- function(crs) {
   message("Downloading Connecticut municipal boundaries...")
   get_from_arc("df1f6d681b7e41dca8bdd03fc9ae0dd6_1") |>
     dplyr::filter(
@@ -194,7 +175,7 @@ get_ct_munis <- function(crs = CONFIG$crs) {
     dplyr::ungroup()
 }
 
-get_ri_munis <- function(crs = CONFIG$crs) {
+get_ri_munis <- function(crs) {
   message("Downloading Rhode Island municipal boundaries...")
   get_from_arc("957468e8bb3245e8b3321a7bf3b6d4aa_0") |>
     dplyr::filter(
@@ -214,9 +195,9 @@ get_ri_munis <- function(crs = CONFIG$crs) {
     )
 }
 
-get_places <- function(states = CONFIG$states, 
-                       year = CONFIG$year,
-                       crs = CONFIG$crs) {
+get_places <- function(states, 
+                       year,
+                       crs) {
   place_geo <- tigris::places(
       state = states,
       year = year,
@@ -258,22 +239,22 @@ prep_munis <- function(df) {
     )
 }
 
-place_decision <- function(states = CONFIG$states) {
+place_decision <- function(states, crs) {
   state_munis <- list()
   no_muni_st <- c()
   for (state in states) {
     if (state == "MA") {
-      state_munis[[state]] <- get_ma_munis()
+      state_munis[[state]] <- get_ma_munis(crs)
     } else if (state == "ME") {
-      state_munis[[state]] <- get_me_munis()
+      state_munis[[state]] <- get_me_munis(crs)
     } else if (state == "NH") {
-      state_munis[[state]] <- get_nh_munis()
+      state_munis[[state]] <- get_nh_munis(crs)
     } else if (state == "VT") {
-      state_munis[[state]] <- get_vt_munis()
+      state_munis[[state]] <- get_vt_munis(crs)
     } else if (state == "CT") {
-      state_munis[[state]] <- get_ct_munis()
+      state_munis[[state]] <- get_ct_munis(crs)
     } else if (state == "RI") {
-      state_munis[[state]] <- get_ri_munis()
+      state_munis[[state]] <- get_ri_munis(crs)
     } else {
       no_muni_st <- append(no_muni_st, state)
     }
@@ -290,26 +271,42 @@ remove_coords <- function(df) {
     dplyr::select(-dplyr::starts_with(c("x", "y")))
 }
 
-get_water_multistate <- function(states) {
-  water_all <- list()
+get_counties <- function(states) {
+  l <- list()
   for (st in states) {
-    county_list <- tigris::counties(state = st) |>
+    l[[st]] <- tigris::counties(state = st) |>
       dplyr::rename_with(tolower) |>
       sf::st_drop_geometry() |>
       dplyr::pull(name)
-    water_state <- list()
-    for (county in county_list) {
-      water_state[[county]] <- tigris::area_water(state = st, county = county)
-    }
-    water_all[[st]] <- dplyr::bind_rows(water_state)
   }
-  df <- dplyr::bind_rows(water_all)
+  l
 }
 
-get_census_units <- function(states = CONFIG$states, 
-                             year = CONFIG$year, 
-                             crs = CONFIG$crs,
-                             census_unit = CONFIG$census_unit,
+get_tigris_multistate <- function(states, .function) {
+  all <- list()
+  l <- get_counties(states)
+  for (st in names(l)) {
+    state <- list()
+    for (county in l[[st]]) {
+      state[[county]] <- .function(state = st, county = county)
+    }
+    all[[st]] <- dplyr::bind_rows(state)
+  }
+  dplyr::bind_rows(all)
+}
+
+get_water_multistate <- function(states) {
+  get_tigris_multistate(states, tigris::area_water)
+}
+
+get_roads_multistate <- function(states) {
+  get_tigris_multistate(states, tigris::roads)
+}
+
+get_census_units <- function(states, 
+                             year, 
+                             crs,
+                             census_unit,
                              cb = TRUE) {
   unit_container <- list()
   for (st in states) {

@@ -1,17 +1,18 @@
-lehd_census_unit <- function() {
-  if (CONFIG$census_unit %in% c("tract", "tracts")) {
-    CONFIG$lehd_unit <<- "tract"
-  } else if (CONFIG$census_unit %in% c("block groups", "block group", "bg")) {
-    CONFIG$lehd_unit <<- "bg"
+lehd_census_units <- function(config) {
+  if (config$census_unit %in% c("tract", "tracts")) {
+    config$lehd_unit <- "tract"
+  } else if (config$census_unit %in% c("block groups", "block group", "bg")) {
+    config$lehd_unit <- "bg"
   } else {
     stop("census_unit parameter must be one of 'tracts' or 'block groups'.")
   }
-  message(glue::glue("LEHD areal unit set to {CONFIG$census_unit}."))
+  message(glue::glue("LEHD areal unit set to {config$census_unit}."))
+  config
 }
 
-get_lodes <- function(states = CONFIG$states, 
-                      year = CONFIG$year, 
-                      census_unit = CONFIG$lehd_unit) {
+get_lodes <- function(states, 
+                      year, 
+                      census_unit) {
   lodes_list <- list()
   for (st in states) {
     message(glue::glue("Getting LODES data for {st}."))
@@ -43,7 +44,7 @@ get_lodes <- function(states = CONFIG$states,
 }
 
 prep_lodes <- function(od,
-                       census_unit = CONFIG$lehd_unit) {
+                       census_unit) {
   h_col <- stringr::str_c("h", census_unit, sep = "_")
   w_col <- stringr::str_c("w", census_unit, sep = "_")
   od |>
@@ -88,8 +89,8 @@ xyxy_to_lines <- function(df, crs, names = c("x_h","y_h","x_w","y_w")){
     )
 }
 
-select_places <- function(place_geo) {
-  searches <- dplyr::bind_rows(CONFIG$placenames) |>
+select_places <- function(place_geo, places) {
+  searches <- dplyr::bind_rows(places) |>
     dplyr::mutate(
       pl_id = stringr::str_c(
         stringr::str_to_lower(place), 
@@ -101,7 +102,7 @@ select_places <- function(place_geo) {
     dplyr::pull(pl_id) |>
     stringr::str_c(collapse="|")
   
-  places <- dplyr::bind_rows(CONFIG$placenames) |>
+  places_vector <- dplyr::bind_rows(places) |>
     dplyr::pull(place)
   
   matched <- place_geo |>
@@ -109,9 +110,9 @@ select_places <- function(place_geo) {
       selected = stringr::str_detect(pl_id, searches)
     )
   match_count <- nrow(matched |> dplyr::filter(selected))
-  if (match_count == length(CONFIG$placenames)) {
-    message(glue::glue("Exact match found for all place names ({stringr::str_c(places, collapse=', ')})."))
-  } else if (match_count > length(CONFIG$placenames)) {
+  if (match_count == length(places)) {
+    message(glue::glue("Exact match found for all place names ({stringr::str_c(places_vector, collapse=', ')})."))
+  } else if (match_count > length(places)) {
     message(glue::glue("Ambiguous place names provided."))
     stop()
   } else {
@@ -147,8 +148,8 @@ st_join_max_overlap <- function(x, y, x_id, y_id) {
 }
 
 lodes_to_census_units <- function(df, 
-                                  census_units,
-                                  census_unit = CONFIG$lehd_unit) {
+                                  census_units_geo,
+                                  census_unit) {
   
   census_units <- census_units |>
     center_xy() |>
@@ -329,8 +330,10 @@ selected_ods_poly <- function(od_census_units) {
     dplyr::full_join(sel_residents, by = "unit_id")
 }
 
-ods_lines <- function(od_census_units, crs = CONFIG$crs) {
-  if ("placenames" %in% names(CONFIG)) {
+ods_lines <- function(od_census_units, crs) {
+  if (
+    (sum(od_census_units$selected_h) > 0) | (sum(od_census_units$selected) > 0)
+    ) {
     od_census_units <- od_census_units |>
       dplyr::filter(selected_h | selected_w)
   }
@@ -353,8 +356,10 @@ ods_lines <- function(od_census_units, crs = CONFIG$crs) {
     xyxy_to_lines(crs = crs)
 }
 
-ods_lines_place_agg <- function(od_census_units, crs = CONFIG$crs) {
-  if ("placenames" %in% names(CONFIG)) {
+ods_lines_place_agg <- function(od_census_units, crs) {
+  if (
+      (sum(od_census_units$selected_h) > 0) | (sum(od_census_units$selected) > 0)
+    ) {
     od_census_units <- od_census_units |>
       dplyr::filter(selected_h | selected_w)
   }
