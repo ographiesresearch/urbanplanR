@@ -634,7 +634,7 @@
     },
     "tidycensus": {
       "Package": "tidycensus",
-      "Version": "1.6",
+      "Version": "1.6.3",
       "Source": "Repository",
       "Repository": "RSPM",
       "Requirements": [
@@ -657,7 +657,7 @@
         "utils",
         "xml2"
       ],
-      "Hash": "10d1f36623aa1e2e713e314091a309ec"
+      "Hash": "c77c57b67d43addfe568dba21ef4b811"
     },
     "tidyr": {
       "Package": "tidyr",
