@@ -215,7 +215,7 @@ get_ri_munis <- function(crs) {
 get_places <- function(states, 
                        year,
                        crs) {
-  place_geo <- tigris::places(
+  tigris::places(
       state = states,
       year = year,
       cb = TRUE

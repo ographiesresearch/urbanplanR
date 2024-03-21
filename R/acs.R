@@ -333,6 +333,7 @@ get_acs_race <- function(states,
                          crs = 4326,
                          geometry = FALSE) {
   vars <- c(
+    "tot" = "B03002_001",
     "white" = "B03002_003",
     "black" = "B03002_004",
     "hisp_lat" = "B03002_012",

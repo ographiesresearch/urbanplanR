@@ -1,19 +1,16 @@
 {
   "project": "beverly_salem",
-  "states": ["MA", "ME", "NH", "VT", "CT", "RI"],
+  "states": ["MA", "NH", "VT", "ME"],
   "places": [
     {
       "place": "Salem",
-      "state": "MA"
-    },
-    {
-      "place": "Beverly",
-      "state": "MA"
+      "state": "NH"
     }
   ],
   "crs": 2249,
   "census_unit": "tracts",
-  "year": 2021,
+  "year": 2022,
   "format": "gpkg",
-  "datasets": ["lodes", "occ", "ind", "age", "race", "housing"]
+  "datasets": ["lodes", "occ", "ind", "age", "race", "housing"],
+  "census_api": "1fa677f93f5ab0f015ee8b1bef72a2c6a5aba024"
 }
