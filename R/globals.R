@@ -82,6 +82,11 @@ write_multi <- function(df,
       )
     } else {
       readr::write_csv(
+        df, 
+        file.path(
+          dir_name,
+          stringr::str_c(name, format, sep=".")
+        ),
         stringr::str_c(name, "csv", sep="."),
         append = FALSE
       )
