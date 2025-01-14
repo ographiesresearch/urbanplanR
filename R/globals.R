@@ -85,9 +85,8 @@ write_multi <- function(df,
         df, 
         file.path(
           dir_name,
-          stringr::str_c(name, format, sep=".")
+          stringr::str_c(name, "csv", sep=".")
         ),
-        stringr::str_c(name, "csv", sep="."),
         append = FALSE
       )
     }
