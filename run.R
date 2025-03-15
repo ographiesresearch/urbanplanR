@@ -2,6 +2,8 @@ source('R/globals.R')
 source('R/lodes.R')
 source('R/acs.R')
 
+dotenv::load_dot_env()
+
 options(
   # Suppress `summarise()` has grouped output by 'x'...'z' message.
   dplyr.summarise.inform = FALSE,
@@ -19,6 +21,12 @@ run <- function(config) {
     lehd_census_units() |>
     tidy_census_units() |>
     std_format()
+  
+  # Create database if it doesn't already exist.
+  # Also prompts user to overwrite or not.
+  if (config$format == "postgis") {
+    db_create_if(config$project)
+  }
 
   message("Downloading places...")
   place_geo <- place_decision(config$states, crs = config$crs)

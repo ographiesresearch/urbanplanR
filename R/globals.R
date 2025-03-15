@@ -48,6 +48,87 @@ std_format <- function(config) {
   config
 }
 
+db_create_conn <-function(dbname) {
+  RPostgres::dbConnect(
+    drv=RPostgres::Postgres(),
+    dbname=dbname,
+    host=Sys.getenv("DB_HOST"),
+    port=Sys.getenv("DB_PORT"),
+    password=Sys.getenv("DB_PASS"),
+    user=Sys.getenv("DB_USER")
+  )
+}
+
+db_exists <- function(dbname) {
+  conn <- db_create_conn("postgres")
+  exists <- dbname %in% RPostgres::dbGetQuery(conn, "SELECT datname FROM pg_database;")$datname
+  RPostgres::dbDisconnect(conn)
+  if (exists) {
+    message(glue::glue("Database '{dbname}' exists!"))
+  } else {
+    message(glue::glue("Database '{dbname}' does not exist."))
+  }
+  exists
+}
+
+db_create <- function(dbname) {
+  conn <- db_create_conn("postgres")
+  message("Creating database...")
+  RPostgres::dbExecute(conn, paste("DROP DATABASE IF EXISTS", dbname))
+  RPostgres::dbExecute(conn, paste("CREATE DATABASE", dbname))
+  RPostgres::dbDisconnect(conn)
+  
+  message("Creating PostGIS extension...")
+  conn <- db_create_conn(dbname)
+  RPostgres::dbExecute(conn, "CREATE EXTENSION postgis")
+  RPostgres::dbDisconnect(conn)
+}
+
+prompt_check <- function(prompt) {
+  message(prompt)
+  if (interactive()) {
+    r <- readline()
+  } else {
+    r <- readLines("stdin",n=1);
+  }
+  if (r %in% c("Y", "y", "N", "n")) {
+    check <- TRUE
+  } else {
+    message(
+      glue::glue("Response '{r}' is invalid. Must be Y or N.")
+    )
+    check <- FALSE
+  }
+  if (!check) {
+    prompt_check(prompt)
+  } else {
+    if (r %in% c("Y", "y")) {
+      message(
+        glue::glue("You answered '{r}'!.")
+      )
+      return(TRUE)
+    } else if (r %in% c("N", "n")) {
+      message(
+        glue::glue("You answered '{r}'! Stopping.")
+      )
+      return(FALSE)
+    }
+  }
+}
+
+db_create_if <- function(dbname) {
+  if (db_exists(dbname)) {
+    overwrite <- prompt_check("Would you like to overwrite the database?")
+    if (overwrite) {
+      db_create(dbname)
+    } else {
+      stop("Database exists and user chose to not overwrite.")
+    }
+  } else {
+    db_create(dbname)
+  }
+}
+
 write_multi <- function(df, 
                         name, 
                         dir_name = NULL, 
@@ -67,6 +148,17 @@ write_multi <- function(df,
       delete_layer = TRUE,
       quiet = TRUE
     )
+  } else if (format == "postgis") {
+    conn <- db_create_conn(dir_name)
+    sf::st_write(
+      df,
+      conn,
+      name,
+      append = FALSE,
+      delete_layer = TRUE,
+      quiet = TRUE
+    )
+    RPostgres::dbDisconnect(conn)
   } else {
     dir.create(dir_name, showWarnings = FALSE)
     if ("sf" %in% class(df)) {
