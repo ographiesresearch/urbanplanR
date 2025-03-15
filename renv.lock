@@ -56,6 +56,25 @@
       ],
       "Hash": "470851b6d5d0ac559e9d01bb352b4021"
     },
+    "RPostgres": {
+      "Package": "RPostgres",
+      "Version": "1.4.8",
+      "Source": "Repository",
+      "Repository": "RSPM",
+      "Requirements": [
+        "DBI",
+        "R",
+        "bit64",
+        "blob",
+        "cpp11",
+        "hms",
+        "lubridate",
+        "methods",
+        "plogr",
+        "withr"
+      ],
+      "Hash": "c74e7e71feadc6b7c5de999483f330cd"
+    },
     "Rcpp": {
       "Package": "Rcpp",
       "Version": "1.0.13-1",
@@ -100,6 +119,18 @@
         "utils"
       ],
       "Hash": "e84984bf5f12a18628d9a02322128dfd"
+    },
+    "blob": {
+      "Package": "blob",
+      "Version": "1.2.4",
+      "Source": "Repository",
+      "Repository": "RSPM",
+      "Requirements": [
+        "methods",
+        "rlang",
+        "vctrs"
+      ],
+      "Hash": "40415719b5a479b87949f3aa0aee737c"
     },
     "class": {
       "Package": "class",
@@ -182,6 +213,13 @@
         "R"
       ],
       "Hash": "d65efa2a203bb99faa78690eee928f30"
+    },
+    "dotenv": {
+      "Package": "dotenv",
+      "Version": "1.0.3",
+      "Source": "Repository",
+      "Repository": "RSPM",
+      "Hash": "7e1213a65b6190437c644a14ec814ef3"
     },
     "dplyr": {
       "Package": "dplyr",
@@ -346,6 +384,19 @@
       ],
       "Hash": "b8552d117e1b808b09a832f589b79035"
     },
+    "lubridate": {
+      "Package": "lubridate",
+      "Version": "1.9.4",
+      "Source": "Repository",
+      "Repository": "RSPM",
+      "Requirements": [
+        "R",
+        "generics",
+        "methods",
+        "timechange"
+      ],
+      "Hash": "be38bc740fc51783a78edb5a157e4104"
+    },
     "magrittr": {
       "Package": "magrittr",
       "Version": "2.0.3",
@@ -401,6 +452,13 @@
         "utils"
       ],
       "Hash": "01f28d4278f15c76cddbea05899c5d6f"
+    },
+    "plogr": {
+      "Package": "plogr",
+      "Version": "0.2.0",
+      "Source": "Repository",
+      "Repository": "RSPM",
+      "Hash": "09eb987710984fc2905c7129c7d85e65"
     },
     "prettyunits": {
       "Package": "prettyunits",
@@ -714,6 +772,17 @@
         "uuid"
       ],
       "Hash": "d750d0f06536d915f01d433254451204"
+    },
+    "timechange": {
+      "Package": "timechange",
+      "Version": "0.3.0",
+      "Source": "Repository",
+      "Repository": "RSPM",
+      "Requirements": [
+        "R",
+        "cpp11"
+      ],
+      "Hash": "c5f3c201b931cd6474d17d8700ccb1c8"
     },
     "tzdb": {
       "Package": "tzdb",
