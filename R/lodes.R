@@ -1,7 +1,7 @@
 lehd_census_units <- function(config) {
   if (config$census_unit %in% c("tract", "tracts")) {
     config$lehd_unit <- "tract"
-  } else if (config$census_unit %in% c("block groups", "block group", "bg")) {
+  } else if (config$census_unit %in% c("block groups", "block group", "bg", "bgs")) {
     config$lehd_unit <- "bg"
   } else {
     stop("census_unit parameter must be one of 'tracts' or 'block groups'.")
