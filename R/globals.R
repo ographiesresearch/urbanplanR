@@ -21,15 +21,20 @@ get_config <- function(args) {
   config_json
 }
 
-tidy_census_units <- function(config) {
-  if (config$census_unit %in% c("tract", "tracts")) {
+std_census_units <- function(config) {
+  if (config$census_unit %in% c("tract", "tracts", "ct", "cts")) {
     config$census_unit <- "tract"
-  } else if (configG$census_unit %in% c("block groups", "block group", "bg")) {
+    config$lehd_unit <- "tract"
+  } else if (configG$census_unit %in% c("block groups", "block group", 
+                                        "cbg", "cbgs", "bg", "bgs")) {
     config$census_unit <- "cbg"
+    config$lehd_unit <- "bg"
   } else {
     stop("census_unit parameter must be one of 'tracts' or 'block groups'.")
   }
-  message(glue::glue("Census areal unit set to {config$census_unit}."))
+  message(
+    glue::glue("Census areal unit set to '{config$census_unit}'.\n
+               LEHD areal unit set to '{config$lehd_unit}'."))
   config
 }
 
@@ -41,27 +46,221 @@ std_format <- function(config) {
     config$format <- "gpkg"
   } else if (config$format %in% c("geojson", "json")) {
     config$format <- "geojson"
-  } else {
-    stop("'format' parameter must be one of 'shp', 'gpkg', or 'geojson'.")
+  } else if (config$format == "postgis") {
+    # do nothing.
+  }else {
+    stop("'format' parameter must be one of 'postgis', 'shp', 'gpkg', or 'geojson'.")
   }
   message(glue::glue("Output format set to {config$format}."))
   config
 }
 
+db_create_conn <-function(dbname, admin=FALSE) {
+  dotenv::load_dot_env()
+  if (admin) {
+    user <- Sys.getenv("DB_ADMIN_USER")
+    password <- Sys.getenv("DB_ADMIN_PASS")
+  }
+  else {
+    user <- Sys.getenv("DB_USER")
+    password <- Sys.getenv("DB_PASS")
+  }
+  RPostgres::dbConnect(
+    drv=RPostgres::Postgres(),
+    dbname=dbname,
+    host=Sys.getenv("DB_HOST"),
+    port=Sys.getenv("DB_PORT"),
+    password=password,
+    user=user
+  )
+}
+
+db_exists <- function(dbname) {
+  conn <- db_create_conn("postgres", admin=TRUE)
+  on.exit(RPostgres::dbDisconnect(conn), add=TRUE)
+  
+  exists <- dbname %in% RPostgres::dbGetQuery(
+    conn, 
+    glue::glue("SELECT datname FROM pg_database WHERE datname = '{dbname}';")
+    )$datname
+  if (exists) {
+    message(glue::glue("Database '{dbname}' exists!"))
+  } else {
+    message(glue::glue("Database '{dbname}' does not exist."))
+  }
+  exists
+}
+
+db_create_postgis <- function(dbname) {
+  conn <- db_create_conn(dbname, admin=TRUE)
+  on.exit(RPostgres::dbDisconnect(conn), add = TRUE)
+  
+  RPostgres::dbExecute(conn, "CREATE EXTENSION postgis;")
+  message(
+    glue::glue("Created PostGIS extension on database '{dbname}'.")
+  )
+}
+
+db_drop <- function(dbname) {
+  conn <- db_create_conn("postgres", admin=TRUE)
+  on.exit(RPostgres::dbDisconnect(conn), add=TRUE)
+  
+  RPostgres::dbExecute(
+    conn, 
+    glue::glue("DROP DATABASE IF EXISTS {dbname};")
+  )
+  
+}
+
+db_create <- function(dbname) {
+  conn <- db_create_conn("postgres", admin=TRUE)
+  on.exit(RPostgres::dbDisconnect(conn), add=TRUE)
+  
+  RPostgres::dbExecute(
+    conn, 
+    glue::glue("CREATE DATABASE {dbname};")
+    )
+  
+  message(
+    glue::glue("Created database '{dbname}'.")
+  )
+}
+
+db_role_exists <- function(role) {
+  conn <- db_create_conn("postgres", admin=TRUE)
+  on.exit(RPostgres::dbDisconnect(conn), add=TRUE)
+  
+  exists <- role %in% RPostgres::dbGetQuery(
+    conn, 
+    glue::glue("SELECT rolname FROM pg_roles WHERE rolname = '{role}';")
+  )$rolname
+  
+  if (exists) {
+    message(glue::glue("Role '{role}' exists!"))
+  } else {
+    message(glue::glue("Role '{role}' does not exist."))
+  }
+  exists
+}
+
+db_role_create <- function(role, pass) {
+  conn <- db_create_conn("postgres", admin=TRUE)
+  on.exit(RPostgres::dbDisconnect(conn), add = TRUE)
+  
+  RPostgres::dbExecute(
+    conn, 
+    glue::glue("CREATE ROLE {role} WITH LOGIN PASSWORD '{pass}';")
+  )
+  message(
+    glue::glue("Role '{role}' created.")
+  )
+}
+
+db_grant_access <- function(dbname, role) {
+  conn <- db_create_conn("postgres", admin=TRUE)
+  on.exit(RPostgres::dbDisconnect(conn), add = TRUE)
+  
+  RPostgres::dbExecute(
+    conn, 
+    glue::glue("GRANT CONNECT ON DATABASE {dbname} TO {role};")
+    )
+  message(
+    glue::glue("Granted CONNECT privilege on database '{dbname}' to role '{role}'.")
+  )
+}
+
+db_set_defaults <- function(dbname, role) {
+  conn <- db_create_conn(dbname, admin=TRUE)
+  on.exit(RPostgres::dbDisconnect(conn), add = TRUE)
+  
+  RPostgres::dbExecute(
+    conn, 
+    glue::glue("ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO {role};")
+    )
+  message(
+    glue::glue("Set default SELECT privileges in '{dbname}' to role '{role}'.")
+  )
+}
+
+prompt_check <- function(prompt) {
+  message(prompt)
+  if (interactive()) {
+    r <- readline()
+  } else {
+    r <- readLines("stdin",n=1);
+  }
+  if (r %in% c("Y", "y", "N", "n")) {
+    check <- TRUE
+  } else {
+    message(
+      glue::glue("Response '{r}' is invalid. Must be Y or N.")
+    )
+    check <- FALSE
+  }
+  if (!check) {
+    prompt_check(prompt)
+  } else {
+    if (r %in% c("Y", "y")) {
+      message(
+        glue::glue("You answered '{r}'!.")
+      )
+      return(TRUE)
+    } else if (r %in% c("N", "n")) {
+      message(
+        glue::glue("You answered '{r}'! Stopping.")
+      )
+      return(FALSE)
+    }
+  }
+}
+
+db_create_if <- function(dbname, role, pass) {
+  if (db_exists(dbname)) {
+    overwrite <- prompt_check("Would you like to overwrite the database?")
+    if (overwrite) {
+      db_drop(dbname)
+      db_create(dbname)
+      db_create_postgis(dbname)
+    } else {
+      message(
+        glue::glue("User chose to not overwrite database '{dbname}'.")
+        )
+    }
+  } else {
+    db_create(dbname)
+    db_create_postgis(dbname)
+  }
+  
+  if (!db_role_exists(role)) {
+    db_role_create(role, pass)
+    db_grant_access(dbname, role)
+    db_set_defaults(dbname, role)
+  } else {
+    db_grant_access(dbname, role)
+    db_set_defaults(dbname, role)
+  }
+}
+
 write_multi <- function(df, 
                         name, 
-                        dir_name = NULL, 
-                        format = NULL,
-                        config = NULL) {
-  if (!is.null(config)) {
-    dir_name <- config$project
-    format <- config$format
-  }
+                        dir_name, 
+                        format) {
   message(glue::glue("Writing {name}."))
   if (format == "gpkg") {
     sf::st_write(
       df,
       stringr::str_c(dir_name, format, sep="."),
+      name,
+      append = FALSE,
+      delete_layer = TRUE,
+      quiet = TRUE
+    )
+  } else if (format == "postgis") {
+    conn <- db_create_conn(dir_name, admin=TRUE)
+    on.exit(RPostgres::dbDisconnect(conn), add = TRUE)
+    sf::st_write(
+      df,
+      conn,
       name,
       append = FALSE,
       delete_layer = TRUE,
