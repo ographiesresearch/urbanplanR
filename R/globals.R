@@ -41,28 +41,42 @@ std_format <- function(config) {
     config$format <- "gpkg"
   } else if (config$format %in% c("geojson", "json")) {
     config$format <- "geojson"
-  } else {
-    stop("'format' parameter must be one of 'shp', 'gpkg', or 'geojson'.")
+  } else if (config$format == "postgis") {
+    # do nothing.
+  }else {
+    stop("'format' parameter must be one of 'postgis', 'shp', 'gpkg', or 'geojson'.")
   }
   message(glue::glue("Output format set to {config$format}."))
   config
 }
 
-db_create_conn <-function(dbname) {
+db_create_conn <-function(dbname, admin=FALSE) {
+  if (admin) {
+    user <- Sys.getenv("DB_ADMIN_USER")
+    password <- Sys.getenv("DB_ADMIN_PASS")
+  }
+  else {
+    user <- Sys.getenv("DB_USER")
+    password <- Sys.getenv("DB_PASS")
+  }
   RPostgres::dbConnect(
     drv=RPostgres::Postgres(),
     dbname=dbname,
     host=Sys.getenv("DB_HOST"),
     port=Sys.getenv("DB_PORT"),
-    password=Sys.getenv("DB_PASS"),
-    user=Sys.getenv("DB_USER")
+    password=password,
+    user=user
   )
 }
 
 db_exists <- function(dbname) {
-  conn <- db_create_conn("postgres")
-  exists <- dbname %in% RPostgres::dbGetQuery(conn, "SELECT datname FROM pg_database;")$datname
-  RPostgres::dbDisconnect(conn)
+  conn <- db_create_conn("postgres", admin=TRUE)
+  on.exit(RPostgres::dbDisconnect(conn), add=TRUE)
+  
+  exists <- dbname %in% RPostgres::dbGetQuery(
+    conn, 
+    glue::glue("SELECT datname FROM pg_database WHERE datname = '{dbname}';")
+    )$datname
   if (exists) {
     message(glue::glue("Database '{dbname}' exists!"))
   } else {
@@ -71,17 +85,85 @@ db_exists <- function(dbname) {
   exists
 }
 
-db_create <- function(dbname) {
-  conn <- db_create_conn("postgres")
-  message("Creating database...")
-  RPostgres::dbExecute(conn, paste("DROP DATABASE IF EXISTS", dbname))
-  RPostgres::dbExecute(conn, paste("CREATE DATABASE", dbname))
-  RPostgres::dbDisconnect(conn)
+db_create_postgis <- function(dbname) {
+  conn <- db_create_conn(dbname, admin=TRUE)
+  on.exit(RPostgres::dbDisconnect(conn), add = TRUE)
   
-  message("Creating PostGIS extension...")
-  conn <- db_create_conn(dbname)
   RPostgres::dbExecute(conn, "CREATE EXTENSION postgis")
-  RPostgres::dbDisconnect(conn)
+  message(
+    glue::glue("Created PostGIS extension on database '{dbname}'.")
+  )
+}
+
+db_create <- function(dbname) {
+  conn <- db_create_conn("postgres", admin=TRUE)
+  on.exit(RPostgres::dbDisconnect(conn), add=TRUE)
+  
+  
+  tryCatch({
+    RPostgres::dbExecute(conn, paste("DROP DATABASE IF EXISTS", dbname))
+  }, error = function(e) {
+    stop(
+      glue::glue("Unable to drop '{dbname}'.\nError: {e}")
+    )
+  })
+  
+  RPostgres::dbExecute(conn, paste("CREATE DATABASE", dbname))
+  
+  message(
+    glue::glue("Created database '{dbname}'.")
+  )
+}
+
+db_create_role <- function(role, pass) {
+  conn <- db_create_conn("postgres", admin=TRUE)
+  on.exit(RPostgres::dbDisconnect(conn), add = TRUE)
+  
+  exists <- role %in% RPostgres::dbGetQuery(
+    conn, 
+    glue::glue("SELECT rolname FROM pg_roles WHERE rolname = '{role}';")
+    )$rolname
+  
+  if (!exists) {
+    # Create the role
+    RPostgres::dbExecute(
+      conn, 
+      glue::glue("CREATE ROLE {role} WITH LOGIN PASSWORD '{pass}';")
+      )
+    message(
+      glue::glue("Role '{role}' created.")
+      )
+  } else {
+    message(
+      glue::glue("Role '{role}' already exists.")
+    )
+  }
+}
+
+db_grant_access <- function(dbname, role) {
+  conn <- db_create_conn("postgres", admin=TRUE)
+  on.exit(RPostgres::dbDisconnect(conn), add = TRUE)
+  
+  RPostgres::dbExecute(
+    conn, 
+    glue::glue("GRANT CONNECT ON DATABASE {dbname} TO {role};")
+    )
+  message(
+    glue::glue("Granted CONNECT privilege on database '{dbname}' to role '{role}'.")
+  )
+}
+
+db_set_defaults <- function(role) {
+  conn <- db_create_conn("postgres", admin=TRUE)
+  on.exit(RPostgres::dbDisconnect(conn), add = TRUE)
+  
+  RPostgres::dbExecute(
+    conn, 
+    glue::glue("ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO {role};")
+    )
+  message(
+    glue::glue("Set default privileges for future tables to user '{role}'.")
+  )
 }
 
 prompt_check <- function(prompt) {
@@ -116,17 +198,22 @@ prompt_check <- function(prompt) {
   }
 }
 
-db_create_if <- function(dbname) {
+db_create_if <- function(dbname, role, pass) {
   if (db_exists(dbname)) {
     overwrite <- prompt_check("Would you like to overwrite the database?")
     if (overwrite) {
       db_create(dbname)
+      db_create_postgis(dbname)
     } else {
       stop("Database exists and user chose to not overwrite.")
     }
   } else {
     db_create(dbname)
+    db_create_postgis(dbname)
   }
+  db_create_role(role, pass)
+  db_grant_access(dbname, role)
+  db_set_defaults(role)
 }
 
 write_multi <- function(df, 
