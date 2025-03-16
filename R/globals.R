@@ -21,15 +21,20 @@ get_config <- function(args) {
   config_json
 }
 
-tidy_census_units <- function(config) {
-  if (config$census_unit %in% c("tract", "tracts")) {
+std_census_units <- function(config) {
+  if (config$census_unit %in% c("tract", "tracts", "ct", "cts")) {
     config$census_unit <- "tract"
-  } else if (configG$census_unit %in% c("block groups", "block group", "bg")) {
+    config$lehd_unit <- "tract"
+  } else if (configG$census_unit %in% c("block groups", "block group", 
+                                        "cbg", "cbgs", "bg", "bgs")) {
     config$census_unit <- "cbg"
+    config$lehd_unit <- "bg"
   } else {
     stop("census_unit parameter must be one of 'tracts' or 'block groups'.")
   }
-  message(glue::glue("Census areal unit set to {config$census_unit}."))
+  message(
+    glue::glue("Census areal unit set to '{config$census_unit}'.\n
+               LEHD areal unit set to '{config$lehd_unit}'."))
   config
 }
 
@@ -238,13 +243,8 @@ db_create_if <- function(dbname, role, pass) {
 
 write_multi <- function(df, 
                         name, 
-                        dir_name = NULL, 
-                        format = NULL,
-                        config = NULL) {
-  if (!is.null(config)) {
-    dir_name <- config$project
-    format <- config$format
-  }
+                        dir_name, 
+                        format) {
   message(glue::glue("Writing {name}."))
   if (format == "gpkg") {
     sf::st_write(
@@ -256,7 +256,8 @@ write_multi <- function(df,
       quiet = TRUE
     )
   } else if (format == "postgis") {
-    conn <- db_create_conn(dir_name)
+    conn <- db_create_conn(dir_name, admin=TRUE)
+    on.exit(RPostgres::dbDisconnect(conn), add = TRUE)
     sf::st_write(
       df,
       conn,
@@ -265,7 +266,6 @@ write_multi <- function(df,
       delete_layer = TRUE,
       quiet = TRUE
     )
-    RPostgres::dbDisconnect(conn)
   } else {
     dir.create(dir_name, showWarnings = FALSE)
     if ("sf" %in% class(df)) {
