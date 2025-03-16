@@ -51,6 +51,7 @@ std_format <- function(config) {
 }
 
 db_create_conn <-function(dbname, admin=FALSE) {
+  dotenv::load_dot_env()
   if (admin) {
     user <- Sys.getenv("DB_ADMIN_USER")
     password <- Sys.getenv("DB_ADMIN_PASS")
@@ -89,55 +90,65 @@ db_create_postgis <- function(dbname) {
   conn <- db_create_conn(dbname, admin=TRUE)
   on.exit(RPostgres::dbDisconnect(conn), add = TRUE)
   
-  RPostgres::dbExecute(conn, "CREATE EXTENSION postgis")
+  RPostgres::dbExecute(conn, "CREATE EXTENSION postgis;")
   message(
     glue::glue("Created PostGIS extension on database '{dbname}'.")
   )
+}
+
+db_drop <- function(dbname) {
+  conn <- db_create_conn("postgres", admin=TRUE)
+  on.exit(RPostgres::dbDisconnect(conn), add=TRUE)
+  
+  RPostgres::dbExecute(
+    conn, 
+    glue::glue("DROP DATABASE IF EXISTS {dbname};")
+  )
+  
 }
 
 db_create <- function(dbname) {
   conn <- db_create_conn("postgres", admin=TRUE)
   on.exit(RPostgres::dbDisconnect(conn), add=TRUE)
   
-  
-  tryCatch({
-    RPostgres::dbExecute(conn, paste("DROP DATABASE IF EXISTS", dbname))
-  }, error = function(e) {
-    stop(
-      glue::glue("Unable to drop '{dbname}'.\nError: {e}")
+  RPostgres::dbExecute(
+    conn, 
+    glue::glue("CREATE DATABASE {dbname};")
     )
-  })
-  
-  RPostgres::dbExecute(conn, paste("CREATE DATABASE", dbname))
   
   message(
     glue::glue("Created database '{dbname}'.")
   )
 }
 
-db_create_role <- function(role, pass) {
+db_role_exists <- function(role) {
   conn <- db_create_conn("postgres", admin=TRUE)
-  on.exit(RPostgres::dbDisconnect(conn), add = TRUE)
+  on.exit(RPostgres::dbDisconnect(conn), add=TRUE)
   
   exists <- role %in% RPostgres::dbGetQuery(
     conn, 
     glue::glue("SELECT rolname FROM pg_roles WHERE rolname = '{role}';")
-    )$rolname
+  )$rolname
   
-  if (!exists) {
-    # Create the role
-    RPostgres::dbExecute(
-      conn, 
-      glue::glue("CREATE ROLE {role} WITH LOGIN PASSWORD '{pass}';")
-      )
-    message(
-      glue::glue("Role '{role}' created.")
-      )
+  if (exists) {
+    message(glue::glue("Role '{role}' exists!"))
   } else {
-    message(
-      glue::glue("Role '{role}' already exists.")
-    )
+    message(glue::glue("Role '{role}' does not exist."))
   }
+  exists
+}
+
+db_role_create <- function(role, pass) {
+  conn <- db_create_conn("postgres", admin=TRUE)
+  on.exit(RPostgres::dbDisconnect(conn), add = TRUE)
+  
+  RPostgres::dbExecute(
+    conn, 
+    glue::glue("CREATE ROLE {role} WITH LOGIN PASSWORD '{pass}';")
+  )
+  message(
+    glue::glue("Role '{role}' created.")
+  )
 }
 
 db_grant_access <- function(dbname, role) {
@@ -153,8 +164,8 @@ db_grant_access <- function(dbname, role) {
   )
 }
 
-db_set_defaults <- function(role) {
-  conn <- db_create_conn("postgres", admin=TRUE)
+db_set_defaults <- function(dbname, role) {
+  conn <- db_create_conn(dbname, admin=TRUE)
   on.exit(RPostgres::dbDisconnect(conn), add = TRUE)
   
   RPostgres::dbExecute(
@@ -162,7 +173,7 @@ db_set_defaults <- function(role) {
     glue::glue("ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO {role};")
     )
   message(
-    glue::glue("Set default privileges for future tables to user '{role}'.")
+    glue::glue("Set default SELECT privileges in '{dbname}' to role '{role}'.")
   )
 }
 
@@ -202,18 +213,27 @@ db_create_if <- function(dbname, role, pass) {
   if (db_exists(dbname)) {
     overwrite <- prompt_check("Would you like to overwrite the database?")
     if (overwrite) {
+      db_drop(dbname)
       db_create(dbname)
       db_create_postgis(dbname)
     } else {
-      stop("Database exists and user chose to not overwrite.")
+      message(
+        glue::glue("User chose to not overwrite database '{dbname}'.")
+        )
     }
   } else {
     db_create(dbname)
     db_create_postgis(dbname)
   }
-  db_create_role(role, pass)
-  db_grant_access(dbname, role)
-  db_set_defaults(role)
+  
+  if (!db_role_exists(role)) {
+    db_role_create(role, pass)
+    db_grant_access(dbname, role)
+    db_set_defaults(dbname, role)
+  } else {
+    db_grant_access(dbname, role)
+    db_set_defaults(dbname, role)
+  }
 }
 
 write_multi <- function(df, 
